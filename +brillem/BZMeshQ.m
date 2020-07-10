@@ -40,17 +40,21 @@ function bzm = BZMeshQ(BrillouinZone,varargin)
 %                   while attempting to satisfy other provided mesh quality
 %                   criteria. This keyword value must be a Python integer and
 %                   its default is -1, meaning there is no limit to extra points.
-kdef = struct('complex_values',false, 'complex_vectors', false);
-[args,kwds]=brillem.parse_arguments(varargin,kdef,{'complex_values','complex_vectors'});
+d.names = {'complex_values', 'complex_vectors'};
+d.defaults = {false, false};
+[kwds, dict] = brillem.readparam(d, varargin{:});
 
 reqInType = 'py.brille._brille.BrillouinZone';
 assert(isa(BrillouinZone,reqInType), ['A single',reqInType,' is required as input']);
 
-if numel(args)>1
-    args = pyargs(args{:});
-else
-    args = pyargs();
+% Convert the extra values to Python equivalents and make a cellarray (again)
+keys = fieldnames(dict);
+pydict = cell(2*numel(keys),1);
+for i=1:numel(keys)
+    pydict{2*(i-1)+1} = keys{i};
+    pydict{2*(i-1)+2} = brillem.m2p(kwds.(keys{i}));
 end
+args = pyargs(pydict{:});
 
 if kwds.complex_values && kwds.complex_vectors
   bzm = py.brille.BZMeshQcc(BrillouinZone, args);

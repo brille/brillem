@@ -1,3 +1,18 @@
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
+%
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+
 function sqw = horace_sqw(obj,qh,qk,ql,en,pars,varargin) % split varagin into fill varargin, and interpreter varargin?
 % Input:
 % ------
@@ -72,23 +87,13 @@ inpForm.fname  = {'partrans' 'coordtrans' 'mat'};
 inpForm.defval = {@(y)y      eye(4)       []};
 inpForm.size   = {[1 1]      [4 4]        [1 -1]};
 inpForm.soft   = {false      false        false};
+[kwds, dict] = brillem.readparam(inpForm, varargin{:});
 
-warnState = warning('off','sw_readparam:UnreadInput');
-kwds = sw_readparam(inpForm, varargin{:});
-
-% Prune varargin for passing to disp2sqw or horace:
-passon = varargin;
-for key = inpForm.fname
-    keys = find(cellfun(@ischar, passon)); % possible keys in varargin
-    if ~isempty(keys)
-        iskey = cellfun(@(x) contains(key,x), passon(keys));
-        keyloc = keys(iskey);
-        if ~isempty(keyloc)
-            passon = [passon(1:keyloc-1) passon(keyloc+2:end)];
-        end
-    end
-end
-
+% dict is a struct with any extra name-value pairs, we want to turn this
+% back into a cellarray of {'name', value} pairs
+names = fieldnames(dict);
+values = struct2cell(dict);
+passon = reshape(cat(2, names, values)',1,2*numel(names));
 
 % Sets the number of spinW model parameters. All others are interpreter pars.
 n_horace_pars = numel(kwds.mat);
@@ -98,13 +103,9 @@ end
 fillerinpt = [{pars(1:n_horace_pars)} passon];
 interpinpt = [{'pars'} {pars((1+n_horace_pars):end)} passon];
 
-% The object holds one of:
-%   one py.brille._brille.BZGridQ[,complex]
-%   one py.brille._brille.BZGridQE[,complex]
-%   a cell array of identical (but memory distinct) BZGridQs
-%   a cell array of identical (but memory distinct) BZGridQEs
+% The object holds one py.brille generalised grids
 % plus a hash of the last parameters used, and functions to fill the
-% grid(s) and convert interpolated values from the function outputs to
+% grid and convert interpolated values from the function outputs to
 % what horace expects [a single intensity per (qh(i),qk(i),ql(i),en(i))
 % tuple].
 % This function needs to compare the inputs in varargin to the

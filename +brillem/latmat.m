@@ -14,19 +14,16 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function latmat = latmat(varargin)
-% use varargin to define angle units
-kdef = struct('degree',true,'radian',false);
-[args,kwds]=brillem.parse_arguments(varargin,kdef,{'degree','radian'});
-
-if numel(args)>=2
-    lens = args{1};
-    angs = args{2};
-else
-    latmat = args{1};
-    assert( size(latmat,1)==3 && size(latmat,2)==3 && ismatrix(latmat) );
+function latmat = latmat(lens, angs, varargin)
+if numel(lens) > 3
+    assert(size(lens,1)==3 && size(lens,2)==3 && ismatrix(lens));
+    latmat = lens;
     return
 end
+% use varargin to define angle units
+d.names = {'degree', 'radian'};
+d.defaults = {true, false};
+kwds = brillem.readparam(d, varargin{:});
 
 assert(numel(lens)>=3 && numel(angs)>=3)
 if kwds.degree && ~kwds.radian

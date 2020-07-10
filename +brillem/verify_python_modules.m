@@ -14,37 +14,36 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function verify_versions()
-
-min_brille_ver = '0.4.0';
+function verify_python_modules(varargin)
+if nargin > 1 && ~isstruct(varargin{1})
+    mods = struct(varargin{:});
+elseif isstruct(varargin{1})
+    mods = varargin{1};
+else
+    error('brillem:verify_python_modules:input','Wrong input');
+end
+ 
 min_py_ver = '3.6';
+pyv = pyenv();
 
-[pyv, pyexec, ~] = pyversion();
-
-if ~semver_compatible(pyv, min_py_ver)
-  error('brillem:verify_version:pythonVersion',...
-        'brille requires Python >= %s', min_py_ver);
+if ~semver_compatible(pyv.Version, min_py_ver)
+  error('brillem:verify_python_modules:pythonVersion',...
+        'brillem requires Python >= %s', min_py_ver);
 end
 
-try
-  brille_mod = py.importlib.import_module('brille');
-catch prob
-  error('brillem:verify_version:brilleNotFound', ...
-        'Python brille module not imported by %s\n%s',...
-        pyexec, prob.message);
-end
+for mod = fieldnames(mods)'
+    try
+      ver = char(py.pkg_resources.get_distribution(mod{:}).version);
+    catch prob
+      error('brillem:verify_python_modules:modVersionUnavailable',...
+            'Problem obtaining %s module version string\n%s',...
+            mod{:}, prob.message);
+    end
 
-try
-  brv = char(brille_mod.version);
-catch prob
-  error('brillem:verify_version:brilleVersionUnavailable',...
-        'Problem obtaining brille module version string\n%s',...
-        prob.message);
-end
-
-if ~semver_compatible(brv, min_brille_ver)
-  error('brillem:verify_version:brilleIncompatibleVersion',...
-        'brille >= %s required but %s present', min_brille_ver, brv);
+    if ~semver_compatible(ver, mods.(mod{:}))
+      error('brillem:verify_python_modules:brilleIncompatibleVersion',...
+            '%s >= %s required but %s present',mod{:}, mods.(mod{:}), ver);
+    end
 end
 
 end

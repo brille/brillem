@@ -1,21 +1,19 @@
-% Copyright 2019 Greg Tucker
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
 %
-% This file is part of brille.
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
 %
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
 %
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% You should have received a copy of the GNU General Public License
 
-function intres = interpolate(obj,qh,qk,ql,en)
+function intvalres = interpolate(obj,qh,qk,ql,en)
 % The python module expects an (N,3)
 iat = cat(2,qh,qk,ql);
 % or (N,4), if isQE is true
@@ -39,22 +37,38 @@ numres = num * sum(cellfun(@prod,obj.shape));
 
 % Do the actual interpolation
 pyallres = obj.pygrid.ir_interpolate_at(iat,true,obj.parallel);
-allres = brille.p2m( pyallres );
-assert( numel(allres) == numres )
+valres = brillem.p2m( pyallres{1} );
+vecres = brillem.p2m( pyallres{2} );
+
+assert( numel(valres) + numel(vecres) == numres )
 % and then split-up the interpolated results into the expected outputs
-intres = cell(1,obj.nFill);
-if ismatrix(allres)
-    offsets = cumsum( cat(2, 0, cellfun(@prod,obj.shape)) );
-    for i=1:obj.nFill
-        intres{i} = reshape( allres(:, (offsets(i)+1):offsets(i+1) ), cat(2,num,obj.shape{i}) );
+intvalres = cell(1,obj.nFillVal);
+
+if ismatrix(valres)
+    offsets = cumsum( cat(2, 0, cellfun(@prod,obj.valshape)) );
+    for i=1:obj.nFillVal
+        intvalres{i} = reshape( valres(:, (offsets(i)+1):offsets(i+1) ), cat(2,num,obj.valshape{i}) );
     end
-elseif ndims(allres)==3
-    offsets = cumsum( cat(2, 0, obj.span) );
-    for i=1:obj.nFill
-%         intres{i} = reshape( allres(:, (offsets(i)+1):offsets(i+1), :), cat(2,num,obj.shape{i}) );
-        intres{i} = reshape( allres(:, :, (offsets(i)+1):offsets(i+1)), cat(2,num,obj.shape{i}) );
+elseif ndims(valres)==3
+    offsets = cumsum( cat(2, 0, obj.valspan) );
+    for i=1:obj.nFillVal
+        intvalres{i} = reshape( valres(:, :, (offsets(i)+1):offsets(i+1)), cat(2,num,obj.valshape{i}) );
     end
 end
+
+intvecres = cell(1,obj.nFillVec);
+if ismatrix(vecres)
+    offsets = cumsum( cat(2, 0, cellfun(@prod,obj.vecshape)) );
+    for i=1:obj.nFillVec
+        intvecres{i} = reshape( vecres(:, (offsets(i)+1):offsets(i+1) ), cat(2,num,obj.vecshape{i}) );
+    end
+elseif ndims(vecres)==3
+    offsets = cumsum( cat(2, 0, obj.vecspan) );
+    for i=1:obj.nFillVec
+        intvecres{i} = reshape( vecres(:, :, (offsets(i)+1):offsets(i+1)), cat(2,num,obj.vecshape{i}) );
+    end
+end
+
 
 
 end

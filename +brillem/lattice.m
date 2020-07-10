@@ -14,35 +14,28 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function [dlat,rlat] = lattice(varargin)
-% use varargin to define angle units, and whether the parameters describe
-% a direct or reciprocal lattice.
-kdef = struct('degree',true,'radian',false,'direct',true,'reciprocal',false,'spgr','P 1');
-[args,kwds]=brillem.parse_arguments(varargin,kdef,{'degree','radian','direct','reciprocal'});
-
-assert( numel(args)>0 ,'At least the lattice vector lengths are required to define a lattice.');
-lens = args{1};
-if numel(args)>1
-    angs = args{2};
-elseif kwds.degree && ~kwds.radian
-    angs = [90,90,90];
-elseif kwds.radian && ~kwds.degree
-    angs = [1,1,1]*pi/2;
+function [dlat,rlat] = lattice(lens, angs, rord, varargin)
+if nargin < 3 || isempty(rord)
+    rord = 'direct';
 end
+if nargin < 2 || isempty(angs)
+    angs = [90,90,90];
+end
+
+d.names = {'spgr'};
+d.defaults = {'P 1'};
+kwds = brillem.readparam(d, varargin{:});
+
 
 assert(numel(lens)>=3 && numel(angs)>=3)
-if kwds.degree && ~kwds.radian
-    angs = angs / 180 * pi;
-end
-
 pylens =brillem.m2p( lens(1:3) );
 pyangs =brillem.m2p( angs(1:3) );
 
-if kwds.direct && ~kwds.reciprocal
-    dlat = py.brille.Direct(pylens, pyangs, kwds.spgr);
-    rlat = dlat.star;
-elseif kwds.reciprocal && ~kwds.direct
+if strncmpi('reciprocal', rord, numel(rord))
     rlat = py.brille.Reciprocal(pylens, pyangs, kwds.spgr);
     dlat = rlat.star;
+else
+    dlat = py.brille.Direct(pylens, pyangs, kwds.spgr);
+    rlat = dlat.star;
 end
 end

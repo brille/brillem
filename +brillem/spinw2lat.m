@@ -16,8 +16,9 @@
 
 function [dlat,rlat,P,trnm,latmat,latmat_primitive] = spinw2lat(sw,varargin)
 % function [dlat,rlat, positions, types] = sw2lat(sw,varargin)
-kdef = struct('k',NaN*[0;0;0],'nExt',NaN*[1;1;1]);
-[~,kwds]=brillem.parse_arguments(varargin,kdef);
+d.names = {'k', 'nExt'};
+d.defaults = {NaN*[0;0;0], NaN*[1;1;1]};
+kwds = brillem.readparam(d, varargin{:});
 
 if all(isnan(kwds.k))
     k = sw.mag_str.k;

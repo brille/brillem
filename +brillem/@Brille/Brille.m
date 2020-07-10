@@ -1,22 +1,20 @@
-% Copyright 2019 Greg Tucker
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
 %
-% This file is part of brille.
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
 %
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
 %
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-% The Brille object holds one
-% py.brille._brille.BZGridQ or py.brille._brille.BZGridQE object,
+% The Brille object holds one generalised py.brille grid object,
 % a function that can be evaluated to fill the object, and one or more
 % functions to interpret the interpolation results for, e.g, Horace.
 classdef Brille < handle
@@ -31,54 +29,53 @@ classdef Brille < handle
         parameterHash = ''
     end
     properties (SetAccess = private)
-        isQE = false
-        nFill = 1
-        nFillers = 1;
-        span  = 1
-        shape = {1}
-        nRet = 0
-        nInt = 1
-        rluNeeded = true
-        parallel = true
-        formfact = false
-        magneticion
-        formfactfun
-        Qscale = eye(4);
-        Qtrans = eye(4);
+        isQE = false       % Does the py.brille grid span Q or (Q,E)
+        nFillVal = 1       % How many eigenvalue outputs are provided by the grid filling function(s)
+        nFillVec = 1       % How many eigenvector outputs are provided by the grid filling function(s)
+        nFillers = 1;      % How many functions comprise the grid filling series
+        span  = 1          %
+        shapeval = {1}     % What is the eigenvalue shape of each filling function output per Q/(Q,E)
+        shapevec = {1}     % What is the eigenvector shape of each filling function output per Q/(Q,E)
+        nRet = 0           %
+        nInt = 1           %
+        rluNeeded = true   % Does the grid filling function expect Q in rlu (true) or inverse angstrom (false)
+        parallel = true    % Should OpenMP parallelism be used by py.brille
+        formfact = false   % Should the magnetic form factor be included
+        magneticion        % If so, for which magnetic ion
+        formfactfun        % What function calculates the form factor
+        Qscale = eye(4);   % An optional multiplicitive transformation of (Q,E)
+        Qtrans = eye(4);   % An optional translational transformation of (Q,E)
     end
     methods
         function obj = Brille(ingrid,varargin)
-            kdef = struct('fill',@(x)(1+0*x),...
-                          'nfill',[],...
-                          'shape',[],...
-                          'model','',...
-                          'interpret',@(x)(x),...
-                          'nret',[],...
-                          'rlu',true,...
-                          'parallel',true,...
-                          'formfact',false,...
-                          'magneticion','',...
-                          'formfactfun',@sw_mff,...
-                          'Qscale',eye(4),...
-                          'Qtrans',eye(4));
-            [args,kwds]=brille.parse_arguments(varargin,kdef,{'rlu'});
-            g3type = 'py.brille._brille.BZGridQ';  % or py.brille._brille.BZGridQcomplex
-            g4type = 'py.brille._brille.BZGridQE'; % or py.brille._brille.BZGridQEcomplex
-            m3type = 'py.brille._brille.BZMeshQ';
-            n3type = 'py.brille._brille.BZNestQ';
-            t3type = 'py.brille._brille.BZTrellisQ';
-            if strncmp(class(ingrid),g4type,length(g4type))
-                obj.isQE=true;
-            elseif strncmp(class(ingrid),g3type,length(g3type))
-                warning('The BZGridQ and BZGridQcomplex objects are inefficient. Consider using a BZTrellisQ* instead.');
-            elseif strncmp(class(ingrid),m3type,length(m3type))
-                warning('The BZMeshQ and BZMeshQcomplex objects are inefficient. Consider using a BZNestQ* instead.');
-            elseif strncmp(class(ingrid),n3type,length(n3type))
-                warning('The BZNestQ and BZNetstQcomplex objects are slow to locate points. Consider using a BZTrellisQ* instead.');
-            elseif ~strncmp(class(ingrid),t3type,length(t3type))
-                error('Expected input of a py.brille._brille.BZ{Grid,Mesh,Nest,Trellis}Q* object')
+            inpt ={ 'fill'       , [ 1,-1], true, @(x)1+0*x
+                    'nfillval'   , [ 1, 1], true, []
+                    'nfillvec'   , [ 1, 1], true, []
+                    'shapeval'   , [ 1,-7], true, []
+                    'shapevec'   , [ 1,-7], true, []
+                    'model'      , [ 1,-2], true, ''
+                    'interpret'  , [ 1,-3], true, @(x)x
+                    'nret'       , [ 1, 1], true, []
+                    'rlu'        , [ 1, 1], true, true
+                    'parallel'   , [ 1, 1], true, true
+                    'formfact'   , [ 1, 1], true, false
+                    'magneticion', [ 1,-4], true, ''
+                    'formfacfun' , [ 1, 1], true, @sw_mff
+                    'Qscale'     , [-5, -5], true, eye(4)
+                    'Qtrans'     , [-6, -6], true, zeros(4)
+                    };
+            sdef.names = inpt(:,1);
+            sdef.sizes = inpt(:,2);
+            sdef.soft = inpt(:,3);
+            sdef.defaults = inpt(:,4);
+            [kwds, ~] = brillem.readparam(sdef, varargin{:});
+            grid_dim = brillem.is_brille_grid(ingrid);
+            obj.isQE = 4 == grid_dim;
+            if 0 == grid_dim
+                error('brillem:Brille:inputGrid',...
+                      'Unexpected input grid type %s', class(ingrid));
             end
-            if islogical( kwds.parallel)
+            if islogical( kwds.parallel )
                 obj.parallel = kwds.parallel;
             end
             if islogical( kwds.formfact )
@@ -110,45 +107,35 @@ classdef Brille < handle
             else
                 fill = {kwds.fill};
             end
-            if numel(args)>0
-                if isa(args{1},'function_handle')
-                    fill = args(1);
-                elseif iscell(args{1}) && all( cellfun(@(x)(isa(x,'function_handle')), args{1}) )
-                    fill = args{1};
-                end
-            end
             assert(iscell(fill) && all( cellfun(@(x)(isa(x,'function_handle')), fill) ));
             obj.filler = fill;
             obj.nFillers = length(fill);
 
             % anything that defines 'varargout', including anonymous functions, returns negative nargout
-            if ~isempty(kwds.nfill) && isnumeric(kwds.nfill) && isscalar(kwds.nfill)
-                nfill = kwds.nfill;
-            else
-                nfill = abs(nargout(fill{1}));
+            if ~isempty(kwds.nfillval) && isnumeric(kwds.nfillval) && isscalar(kwds.nfillval)
+                nfillval = kwds.nfillval;
             end
-            fshape = kwds.shape; % what is the shape of each filler output
+            if ~isempty(kwds.nfillvec) && isnumeric(kwds.nfillvec) && isscalar(kwds.nfillvec)
+                nfillvec = kwds.nfillvec;
+            end
+            fshapeval = kwds.shapeval; % what is the shape of each filler output
+            fshapevec = kwds.shapevec;
             rlu = kwds.rlu; % does the filler function expect Q in rlu or inverse Angstrom?
 
             nret = [];
             if ~isempty(kwds.model) && ischar(kwds.model)
                 switch lower(kwds.model)
                     case 'spinw'
-                        nfill = 2;
-                        % if obj.nFillers==1
-                        %     obj.filler = [ obj.filler {@brille.modesort} ];
-                        %     obj.nFillers=2;
-                        % end
+                        nfillval = 1;
+                        nfillvec = 1;
                         rlu = true;
                         interpret = { @obj.neutron_spinwave_intensity, @obj.convolve_modes };
                         nret = [2,1];
-                        fshape = {1,[3,3]};
+                        fshapeval = {1}; % filler produces 1 energy and a 3x3 matrix per Q
+                        fshapevec = {[3,3]};
                 end
             else
                 interpret = kwds.interpret;
-                if numel(args)>1
-                    interpret = args{2};
-                end
             end
             if ~iscell(interpret)
                 interpret = {interpret};
@@ -163,14 +150,19 @@ classdef Brille < handle
                 nret = cellfun(@(x)(abs(nargout(x))),interpret);
             end
 
-            if ~iscell(fshape)
-                fshape = {fshape};
+            if ~iscell(fshapeval)
+                fshapeval = {fshapeval};
             end
-            assert( ~isempty(fshape) && numel(fshape) == nfill, 'We need to know the shape of the filler output(s)' );
+            if ~iscell(fshapevec)
+                fshapevec = {fshapfshapeveceval};
+            end
+            assert( ~isempty(fshapevec) && ~isempty(fshapeval) && numel(fshapeval) == nfillval && numel(fshapevec) == nfillvec, 'We need to know the shape of the filler output(s)' );
 
             assert( nret(end) == 1, 'the last interpreter function should return a scalar!');
-            obj.nFill = nfill;
-            obj.shape = fshape;
+            obj.nFillVal = nfillval;
+            obj.nFillVec = nfillvec;
+            obj.shapeval = fshapeval;
+            obj.shapevec = fshapevec;
             obj.rluNeeded = rlu;
             obj.nRet = nret;
             obj.interpreter = interpret;

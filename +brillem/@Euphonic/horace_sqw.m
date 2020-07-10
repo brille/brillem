@@ -1,21 +1,20 @@
-% Copyright 2019 Greg Tucker
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
 %
-% This file is part of brille.
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
 %
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
 %
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function sqw = horace_sqw(obj,qh,qk,ql,en,varargin)
+function sqw = horace_sqw(obj,qh,qk,ql,en,input_pars,varargin)
 % Input:
 % ------
 %   qh,qk,ql,en Arrays containing points at which to evaluate sqw from the
@@ -72,7 +71,7 @@ function sqw = horace_sqw(obj,qh,qk,ql,en,varargin)
 %                            is selected the *broadened lineshapes* will be
 %                            corrected for the Bose factor.
 %                            [default: true]
-%              'T'         - The sample temperature used in the Deby-Waller
+%             'temperature'- The sample temperature used in the Deby-Waller
 %                            and Bose factor corrections. For the simple
 %                            harmonic oscillator function, the temperature
 %                            provided with its parameters will override
@@ -83,12 +82,12 @@ function sqw = horace_sqw(obj,qh,qk,ql,en,varargin)
 % -------
 %   sqw        Array with spectral weight at the Q,E points
 %              [ size(sqw) == size(qh) ]
-kdef = struct('coordtrans',eye(4));
-[args,kwds] = brille.parse_arguments(varargin,kdef);
-assert( numel(args)>0 && ismatrix(args{1}) && isnumeric(args{1}) ...
-       ,'Parameter input is required')
-input_pars = args{1};
+matkeys.names = {'coordtrans'};
+matkeys.defaults = {eye(4)};
+matkeys.sizes = {[4,4]};
+[matkwds, dict] = brillem.readparam(matkeys, varargin{:});
 
+assert(ismatrix(input_pars) && isnumeric(input_pars), 'Numeric matrix input parameters are required')
 
 nQ = numel(qh);
 inshape = size(qh);
@@ -99,28 +98,23 @@ if size(qh,1) ~= nQ
     en = en(:);
 end
 % Transforms input coordinates if needed
-if sum(sum(abs(kwds.coordtrans - eye(4)))) > 0
+if sum(sum(abs(matkwds.coordtrans - eye(4)))) > 0
     qc = [qh qk ql en];
-    qh = sum(bsxfun(@times, kwds.coordtrans(1,:), qc),2);
-    qk = sum(bsxfun(@times, kwds.coordtrans(2,:), qc),2);
-    ql = sum(bsxfun(@times, kwds.coordtrans(3,:), qc),2);
-    en = sum(bsxfun(@times, kwds.coordtrans(4,:), qc),2);
+    qh = sum(bsxfun(@times, matkwds.coordtrans(1,:), qc),2);
+    qk = sum(bsxfun(@times, matkwds.coordtrans(2,:), qc),2);
+    ql = sum(bsxfun(@times, matkwds.coordtrans(3,:), qc),2);
+    en = sum(bsxfun(@times, matkwds.coordtrans(4,:), qc),2);
     clear qc;
 end
-Q = brille.m2p(cat(2,qh,qk,ql));
+Q = brillem.m2p(cat(2,qh,qk,ql));
 
-if numel(args)>1
-    dict = struct(args{2:end});
-else
-    dict = struct();
-end
 if isfield(dict,'scale')
     scale = dict.scale;
 else
     scale = 1;
 end
-if isfield(dict,'T')
-    temp = dict.T;
+if isfield(dict,'temperature')
+    temp = dict.temperature;
 else
     temp = 5;
 end
@@ -140,11 +134,11 @@ if isfield(dict,'resfun') && ischar(dict.resfun)
     end
 end
 dict.scale = scale;
-dict.T = temp;
+dict.temperature = temp;
 if ~isempty(pars)
     dict.param = pars;
 end
-sqw = brille.p2m( obj.pyobj.s_qw(Q, brille.m2p(en), py.dict(dict)) );
+sqw = brillem.p2m( obj.pyobj.s_qw(Q, brille.m2p(en), py.dict(dict)) );
 
 if size(sqw) ~= inshape
   sqw = reshape(sqw, inshape);

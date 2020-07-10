@@ -1,19 +1,18 @@
-% Copyright 2019 Greg Tucker
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
 %
-% This file is part of brille.
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
 %
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
 %
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 classdef Euphonic < handle
   properties
@@ -21,40 +20,25 @@ classdef Euphonic < handle
   end
   methods
     function obj = Euphonic(euphonic, varargin)
-      kdef = struct('scattering_lengths',[], ...
-                    'parallel',true, ...
-                    'halfN',[], ...
-                    'step',[], ...
-                    'unit','rlu', ...
-                    'asr',[], ...
-                    'precondition',[], ...
-                    'set_attrs',[], ...
-                    'dipole',[], ...
-                    'eta_scale',[], ...
-                    'splitting',[], ...
-                    'use_primitive',false ...
-                    );
-      [~,kwds] = brille.parse_arguments(varargin,kdef);
-      % Verify that euphonic is a InterpolationData object:
-      assert( isa(euphonic,...
-          'py.euphonic.data.interpolation.InterpolationData') )
-      % Find the key names which have non-empty values:
+      % Ensure that the versions of Euphonic and brillem are as expected
+      brillem.verify_python_modules('euphonic','0.3.0', 'brilleu','0.1.0');
+      % separate MATLAB name-value pairs and Python name-value pairs:
+      % For now there are no key-value pairs which control behaviour on the
+      % MATLAB side, so we provide an empty struct to readparam:
+      [~, kwds] = brillem.readparam(struct(), varargin{:});
+      % Verify that euphonic is a ForceConstants object:
+      assert( isa(euphonic,'py.euphonic.force_constants.ForceConstants') )
+      % Extract just the names from the pairs
       keys = fieldnames(kwds);
-      i = 1;
-      while (i<numel(keys))
-          if isempty(kwds.(keys{i}))
-              keys(i)=[];
-          else
-              i = i+1;
-          end
-      end
-      % And store them
+      % Convert the values to Python equivalents and make a cellarray (again)
       pykwds = cell(2*numel(keys),1);
       for i=1:numel(keys)
         pykwds{2*(i-1)+1} = keys{i};
-        pykwds{2*(i-1)+2} = brille.m2p(kwds.(keys{i}));
+        pykwds{2*(i-1)+2} = brillem.m2p(kwds.(keys{i}));
       end
-      obj.pyobj = py.brille.euphonic.BrEu(euphonic, pyargs(pykwds{:}));
+      % Finally pass the py.Euphonic.ForceConstants object and optional
+      % arguments to the py.brilleu.BrillEu constructor
+      obj.pyobj = py.brilleu.BrillEu(euphonic, pyargs(pykwds{:}));
     end % intializer
     sqw = horace_sqw(obj,qh,qk,ql,en,varargin)
     wq  = w_q(obj,qh,qk,ql,varargin)

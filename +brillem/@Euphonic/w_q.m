@@ -1,19 +1,18 @@
-% Copyright 2019 Greg Tucker
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
 %
-% This file is part of brille.
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
 %
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
 %
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 function wq = w_q(obj,qh,qk,ql,varargin)
 % Input:
@@ -28,15 +27,17 @@ function wq = w_q(obj,qh,qk,ql,varargin)
 %                             py.brille.euphonic.BrEu object's method.
 %                             [default: eye(4) % identity]
 %
-%              Any additional keyword parameters will be passed to SymSim
-%              as a py.dict for processing.
+%              Any additional keyword parameters will be passed to
+%              BrillEu.w_q as a py.dict for processing.
 %
 % Output:
 % -------
 %   w(q)       Array with eigen energies at the Q points
 %              [ size(w_q) == size(qh) ]
-kdef = struct('coordtrans',eye(4));
-[args,kwds] = brille.parse_arguments(varargin,kdef);
+matkeys.names = {'coordtrans'};
+matkeys.defaults = {eye(4)};
+matkeys.sizes = {[4,4]};
+[kwds, dict] = brillem.readparam(matkeys, varargin{:});
 
 
 nQ = numel(qh);
@@ -56,15 +57,10 @@ if sum(sum(abs(kwds.coordtrans - eye(4)))) > 0
 end
 Q = brille.m2p(cat(2,qh,qk,ql));
 
-if numel(args)>1
-    dict = struct(args{:});
-else
-    dict = struct();
-end
-wq = brille.p2m( obj.pyobj.w_q(Q, py.dict(dict)).magnitude );
+wq = brille.p2m(obj.pyobj.w_q(Q, py.dict(dict)));
 
 wq_size = size(wq);
 if wq_size(1:end-1) ~= inshape
     wq = reshape(wq, [inshape, wq_size(end)]);
 end
-end % horace_sqw
+end % w_q

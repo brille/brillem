@@ -15,15 +15,15 @@
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 function plot3(bzSTAR,varargin)
-    defs=struct('facecolor','none',...
-                'facealpha',1,...
-                'edgecolor','k',...
-                'edgealpha',1,...
-                'showgrid',true,...
-                'fullgrid',false,...
-                'units','invA',...
-                'origin',[0,0,0]);
-    [~,kwds]=brille.parse_arguments(varargin,defs,{'showgrid','fullgrid'});
+    d = { 'facecolor', 'none'
+	  'facealpha', 1
+	  'edgecolor', 'k'
+	  'edgealpha', 1
+	  'showgrid', true
+	  'fullgrid', false
+	  'units', 'invA',
+	  'origin', [0,0,0] };
+    kwds = brillem.readparams(struct('names',d(:,1),'defaults',d(:,2)), varargin{:});
     ph = ishold();
     hold on;
 
