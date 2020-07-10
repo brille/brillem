@@ -1,19 +1,18 @@
-% Copyright 2019 Greg Tucker
-%
-% This file is part of brille.
-%
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
-%
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
+% 
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+% 
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+% 
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 function bzm = BZMeshQ(BrillouinZone,varargin)
 % Create a py.brille.BZMeshQ object from a py.brille.BrillouinZone object
@@ -41,8 +40,8 @@ function bzm = BZMeshQ(BrillouinZone,varargin)
 %                   while attempting to satisfy other provided mesh quality
 %                   criteria. This keyword value must be a Python integer and
 %                   its default is -1, meaning there is no limit to extra points.
-kdef = struct('complex',false);
-[args,kwds]=brille.parse_arguments(varargin,kdef,{'complex'});
+kdef = struct('complex_values',false, 'complex_vectors', false);
+[args,kwds]=brillem.parse_arguments(varargin,kdef,{'complex_values','complex_vectors'});
 
 reqInType = 'py.brille._brille.BrillouinZone';
 assert(isa(BrillouinZone,reqInType), ['A single',reqInType,' is required as input']);
@@ -52,10 +51,17 @@ if numel(args)>1
 else
     args = pyargs();
 end
-if kwds.complex
-    bzm = py.brille.BZMeshQcomplex(BrillouinZone, args);
+
+if kwds.complex_values && kwds.complex_vectors
+  bzm = py.brille.BZMeshQcc(BrillouinZone, args);
+elseif kwds.complex_values
+  bzm = py.brille.BZMeshQcd(BrillouinZone, args);
+elseif kwds.complex_vectors
+  bzm = py.brille.BZMeshQdc(BrillouinZone, args);
 else
-    bzm = py.brille.BZMeshQ(BrillouinZone, args);
+  bzm = py.brille.BZMeshQdd(BrillouinZone, args);
 end
 
 end
+
+

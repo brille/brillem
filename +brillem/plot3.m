@@ -1,19 +1,18 @@
-% Copyright 2019 Greg Tucker
-%
-% This file is part of brille.
-%
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
-%
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
+% 
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+% 
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+% 
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 function plot3(bzSTAR,varargin)
     defs=struct('facecolor','none',...
@@ -28,15 +27,12 @@ function plot3(bzSTAR,varargin)
     ph = ishold();
     hold on;
 
-    bzgtype = 'py.brille._brille.BZGridQ';
-    isgrid = isa(bzSTAR,bzgtype) || isa(bzSTAR, [bzgtype 'complex']);
-    bzmtype = 'py.brille._brille.BZMeshQ';
-    ismesh = isa(bzSTAR, bzmtype) || isa(bzSTAR, [bzmtype 'complex']);
-    bztype = 'py.brille._brille.BrillouinZone';
-    if isa(bzSTAR, bztype)
+    isgrid = false;
+    if isa(bzSTAR, 'py.brille._brille.BrillouinZone')
         bz = bzSTAR;
-    elseif isgrid || ismesh;
+    elseif brillem.is_brille_grid(bzSTAR)
         bz = bzSTAR.BrillouinZone;
+        isgrid = true;
     end
     assert( exist('bz','var')==1, 'The first input must be a brille.BrillouinZone or brille.BZ* object');
 
@@ -51,7 +47,7 @@ function plot3(bzSTAR,varargin)
 
     v_p_f = bz.vertices_per_face;
     for i=1:size(faces,1)
-        perm = brille.p2m(py.numpy.array(v_p_f(i))) + 1; % +1 converts indexing
+        perm = brillem.p2m(py.numpy.array(v_p_f(i))) + 1; % +1 converts indexing
         patch('faces', perm, 'vertices', verts+kwds.origin, ...
               'facecolor', kwds.facecolor, 'facealpha', kwds.facealpha, ...
               'edgecolor', kwds.edgecolor, 'edgealpha', kwds.edgealpha);

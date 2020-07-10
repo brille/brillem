@@ -1,24 +1,23 @@
-% Copyright 2019 Greg Tucker
-%
-% This file is part of brille.
-%
-% brille is free software: you can redistribute it and/or modify it under the
-% terms of the GNU Affero General Public License as published by the Free
-% Software Foundation, either version 3 of the License, or (at your option)
-% any later version.
-%
-% brille is distributed in the hope that it will be useful, but
-% WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-% or FITNESS FOR A PARTICULAR PURPOSE.
-%
-% See the GNU Affero General Public License for more details.
-% You should have received a copy of the GNU Affero General Public License
-% along with brille. If not, see <https://www.gnu.org/licenses/>.
+% brillem -- a MATLAB interface for brille
+% Copyright 2020 Greg Tucker
+% 
+% This program is free software: you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+% 
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details.
+% 
+% You should have received a copy of the GNU General Public License
+% along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 function isok = test()
 isok=false;
 
-[d,r] = brille.lattice([2*pi,2*pi,2*pi],[90,90,120],'direct');
+[d,r] = brillem.lattice([2*pi,2*pi,2*pi],[90,90,120],'direct');
 
 if     ~isapprox(r.a, 2*pi/d.a/sin(d.gamma))
     return;
@@ -28,10 +27,10 @@ elseif ~isapprox(r.c, 2*pi/d.c)
     return;
 end
 
-if ~throws_message('A single py.brille._brille.Reciprocal lattice is required as input',@brille.brillouinzone,d)
+if ~throws_message('A single py.brille._brille.Reciprocal lattice is required as input',@brillem.brillouinzone,d)
     return;
 end
-bz = brille.brillouinzone(r);
+bz = brillem.brillouinzone(r);
 if bz.faces.shape{1}~=8 || bz.faces.shape{2}~=3
     return;
 elseif bz.faces_per_vertex.shape{1}~=12 || bz.faces_per_vertex.shape{2}~=3
@@ -40,10 +39,10 @@ elseif bz.vertices.shape{1}~=12||bz.vertices.shape{2}~=3
     return;
 end
 
-if ~throws_message('A single py.brille._brille.BrillouinZone is required as input',@brille.BZGridQ,r)
+if ~throws_message('A single py.brille._brille.BrillouinZone is required as input',@brillem.BZTrellisQ,r)
     return;
 end
-bzg = brille.BZGridQ(bz,'N',[5,5,5]);
+bzg = brillem.BZTrellisQ(bz,'N',[5,5,5]);
 if bzg.map.shape{1} ~=10 || bzg.map.shape{2} ~=10 || bzg.map.shape{3} ~= 10
     return;
 elseif bzg.grid_rlu.shape ~= bzg.grid_invA.shape
@@ -52,9 +51,9 @@ elseif bzg.rlu.shape ~= bzg.invA.shape
     return;
 end
 % more tests?
-[~,r]=brille.lattice(2*pi*[1,1,1],90*[1,1,1]);
-bz=brille.brillouinzone(r);
-bzg = brille.BZGridQ(bz,'N',[10,10,10]);
+[~,r]=brillem.lattice(2*pi*[1,1,1],90*[1,1,1]);
+bz=brillem.brillouinzone(r);
+bzg = brillem.BZTrellisQ(bz,'N',[10,10,10]);
 sq = @(Q)( cat(2, Q(:,1),Q(:,2)+0.5*Q(:,3)) ); % replace with any function linear in the components of Q
 bzg.fill( py.numpy.array( sq(double(bzg.rlu)) ) );
 qrand = (rand(30,3)-0.5);
