@@ -154,7 +154,7 @@ classdef Brille < handle
                 fshapeval = {fshapeval};
             end
             if ~iscell(fshapevec)
-                fshapevec = {fshapfshapeveceval};
+                fshapevec = {fshapevec};
             end
             assert( ~isempty(fshapevec) && ~isempty(fshapeval) && numel(fshapeval) == nfillval && numel(fshapevec) == nfillvec, 'We need to know the shape of the filler output(s)' );
 

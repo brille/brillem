@@ -30,7 +30,7 @@ if sum(sum(abs(trn - eye(s2))))>0
 end
 
 % numpy.array as input to the interpolator
-iat = brille.m2p(iat);
+iat = brillem.m2p(iat);
 
 num = numel(qh);
 numres = num * sum(cellfun(@prod,obj.shape));

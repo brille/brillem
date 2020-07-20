@@ -107,7 +107,7 @@ for ii = 1:length(fName)
         inputValid = true;
         
         % Go through all dimension of the selected field to check size.
-        if check
+        if 0 % check
             for jj = 1:length(format.sizes{ii})
                 if format.sizes{ii}(jj)>0
                     if format.sizes{ii}(jj) ~= size(raw.(rName{rawIdx}),jj)
