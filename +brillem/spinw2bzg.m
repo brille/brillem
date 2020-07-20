@@ -15,7 +15,7 @@
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 function [bzg,trnm] = spinw2bzg(sw,varargin)
-[~,rlat,trnm]=brillem.spinw2lat(sw,varargin);
-bz = brillem.brillouinzone(rlat,varargin);
+[~,rlat,trnm]=brillem.spinw2lat(sw,varargin{:});
+bz = brillem.brillouinzone(rlat,varargin{:});
 bzg = brillem.BZTrellisQ(bz,varargin{:},'complex_vectors',true);
 end

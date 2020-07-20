@@ -17,7 +17,7 @@
 function isok = test()
 isok=false;
 
-[d,r] = brillem.lattice([2*pi,2*pi,2*pi],[90,90,120],'direct');
+[d,r] = brillem.lattice([2*pi,2*pi,2*pi],[90,90,120],'deg', 'direct');
 
 if     ~isapprox(r.a, 2*pi/d.a/sin(d.gamma))
     return;

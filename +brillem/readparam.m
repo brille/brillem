@@ -80,8 +80,12 @@ else
 end
 
 if ~isstruct(raw)
-    MException('brillem:readparam:WrongParameter',...
-        'Parameter name-value pairs are expected!').throwAsCaller;
+    if isempty(raw)
+        raw = struct;
+    else
+        MException('brillem:readparam:WrongParameter',...
+            'Parameter name-value pairs are expected!').throwAsCaller;
+    end
 end
 
 if ~isfield(format, 'names')

@@ -14,7 +14,7 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function [dlat,rlat,P,trnm,latmat,latmat_primitive] = spinw2lat(sw,varargin)
+function [dlat,rlat,trnm,latmat,latmat_primitive] = spinw2lat(sw,varargin)
 % function [dlat,rlat, positions, types] = sw2lat(sw,varargin)
 d.names = {'k', 'nExt'};
 d.defaults = {NaN*[0;0;0], NaN*[1;1;1]};

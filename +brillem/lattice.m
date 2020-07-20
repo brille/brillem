@@ -14,12 +14,19 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function [dlat,rlat] = lattice(lens, angs, rord, varargin)
-if nargin < 3 || isempty(rord)
+function [dlat,rlat] = lattice(lens, angs, raddeg, rord, varargin)
+if nargin < 4 || isempty(rord)
     rord = 'direct';
+end
+if nargin < 3 || isempty(raddeg)
+    raddeg = 'degrees';
 end
 if nargin < 2 || isempty(angs)
     angs = [90,90,90];
+end
+
+if strncmp(raddeg, 'rad', 3)
+    angs = angs * 180 / pi;
 end
 
 d.names = {'spgr'};
