@@ -19,7 +19,8 @@ function fill(obj,varargin)
 newHash = brillem.DataHash(varargin);
 if ~strcmp(obj.parameterHash, newHash)
     vecs = obj.get_mapped();
-    fillwith = cell(1,obj.nFill);
+    nFill = logical(obj.nFillVal) + logical(obj.nFillVec);
+    fillwith = cell(1, nFill);
     [fillwith{:}] = obj.filler{1}(vecs{:},varargin{:});
     for i=2:obj.nFillers
         [fillwith{:}] = obj.filler{i}(fillwith{:});
@@ -29,35 +30,63 @@ if ~strcmp(obj.parameterHash, newHash)
     obj.span = ones(size(fillwith));
     num = numel(vecs{1});
     mds = zeros(size(fillwith));
-    for i=1:obj.nFill
+    for i=1:nFill
         fws = size(fillwith{i});
-        obj.shape{i} = fws(2:end);
+        shape{i} = fws(2:end);
+        if numel(shape{i}) < 2;
+            shape{i}(2) = 1;
+        end
         mds(i) = fws(2);
         if length(fws)>2
             obj.span(i)=prod(fws(3:end));
         end
     end
     equalmodes = std(mds)==0;
-    for i=1:obj.nFill
+    for i=1:nFill
         if equalmodes
             fillwith{i} = reshape( fillwith{i}, [num, mds(i), obj.span(i)] );
         elseif length(obj.shape{i}) > 1
-            fillwith{i} = reshape( fillwith{i}, [num, prod(obj.shape{i})] );
+            fillwith{i} = reshape( fillwith{i}, [num, prod(shape{i})] );
         end
     end
-    % and smash them together for input into the grid:
-    if equalmodes
-        fillwith = cat(3, fillwith{:});
-    else
-        fillwith = cat(2, fillwith{:});
+%   % and smash them together for input into the grid:
+%   if equalmodes
+%       fillwith = cat(3, fillwith{:});
+%   else
+%       fillwith = cat(2, fillwith{:});
+%   end
+%   %
+%   assert( numel(fillwith) == num * sum(cellfun(@prod, shape)) )
+%   %
+%   % BAD HACK FOR NOW. CHANGE ME!
+%   nel = brillem.m2p( uint16([1,0,0,3]) );
+%   % and finally put them in:
+%   obj.pygrid.fill( brillem.m2p(fillwith), nel); % TODO FIXME !!!!!! This is no longer the correct syntax!
+
+    assert( all(cellfun(@(x,y) numel(x) == num * prod(y), fillwith, shape)) )
+
+    pvals = brillem.m2p(fillwith{1});
+    nval = shape{1}(2);
+    if nval == 1
+        pvals = py.numpy.reshape(pvals, {int32(num), int32(shape{1}(1)), int32(1)});
     end
-    %
-    assert( numel(fillwith) == num * sum(cellfun(@prod,obj.shape)) )
-    %
-    % BAD HACK FOR NOW. CHANGE ME!
-    nel = brillem.m2p( uint16([1,0,0,3]) );
-    % and finally put them in:
-    obj.pygrid.fill( brillem.m2p(fillwith), nel); % TODO FIXME !!!!!! This is no longer the correct syntax!
+    if logical(obj.nFillVal) && logical(obj.nFillVec)
+        obj.shapeval = shape{1};
+        obj.shapevec = shape{2};
+        pvecs = brillem.m2p(fillwith{2});
+        nvec = shape{2}(2);
+        if nvec == 1
+            pvecs = py.numpy.reshape(pvecs, {int32(num), int32(shape{2}(1)), int32(1)});
+        end
+        obj.pygrid.fill(pvals, {int32(nval)}, pvecs, {int32(shape{2}(2))});
+    else
+        if logical(obj.nFillVal)
+            obj.shapeval = shape{1};
+        else
+            obj.shapevec = shape{1};
+        end
+        obj.pygrid.fill(pvals, {int32(nval)});
+    end
 
     % we have successfully filled the grid(s), so store the hash.
     obj.parameterHash = newHash;

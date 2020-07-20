@@ -45,12 +45,14 @@ classdef Brille < handle
         formfactfun        % What function calculates the form factor
         Qscale = eye(4);   % An optional multiplicitive transformation of (Q,E)
         Qtrans = eye(4);   % An optional translational transformation of (Q,E)
+        baseobj            % Base (calculator) object (e.g. SpinW object)
     end
     methods
         function obj = Brille(ingrid,varargin)
             inpt ={ 'fill'       , [ 1,-1], true, @(x)1+0*x
                     'nfillval'   , [ 1, 1], true, []
                     'nfillvec'   , [ 1, 1], true, []
+                    'max_volume' , [ 1, 1], true, 0.00001
                     'shapeval'   , [ 1,-7], true, []
                     'shapevec'   , [ 1,-7], true, []
                     'model'      , [ 1,-2], true, ''
@@ -69,6 +71,14 @@ classdef Brille < handle
             sdef.soft = inpt(:,3);
             sdef.defaults = inpt(:,4);
             [kwds, ~] = brillem.readparam(sdef, varargin{:});
+            % If the input is a SpinW object, automagically generate all required inputs
+            if (strcmp(class(ingrid), 'spinw'))
+                obj.baseobj = ingrid;
+                [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume);
+                kwds.model = 'spinw';
+                kwds.Qtrans = Qtrans;
+                kwds.fill = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:});
+            end
             grid_dim = brillem.is_brille_grid(ingrid);
             obj.isQE = 4 == grid_dim;
             if 0 == grid_dim
