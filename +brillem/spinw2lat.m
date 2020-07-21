@@ -20,16 +20,42 @@ d.names = {'k', 'nExt'};
 d.defaults = {NaN*[0;0;0], NaN*[1;1;1]};
 kwds = brillem.readparam(d, varargin{:});
 
-if all(isnan(kwds.k))
-    k = sw.mag_str.k;
-else
+% In SpinW notation, nExt and k define separate functionalities and need not be related.
+% SpinW uses nExt to define the supercell and k to define a single-k magnetic structure
+% which can be represented by a single rotating coordinate frame (so not all single-k
+% structures can be represented). It is possible in SpinW to have both a supercell
+% and a single-k structure by specifying non-unity values for nExt and non-zero
+% values for k. In this case the spins of adjacent supercells will have their
+% angles rotated by the amount determined by k.
+
+if all(isnan(kwds.k)) && all(isnan(kwds.nExt))
+    % Default case, use nExt and k values from SpinW object
+    if ~all(sw.mag_str.k==0) && ~all(sw.mag_str.nExt==1)
+        error(['Brille cannot handle SpinW models which have both supercell' ...
+              'and single-k structure simultaneously']);
+    elseif all(sw.mag_str.k==0)
+        nExt = double(sw.mag_str.nExt);
+        k = 1 ./ nExt;
+    else
+        k = sw.mag_str.k;
+        [~, nExt] = rat(k(:), 1e-5);  % Use the denominator of k
+    end
+elseif ~all(isnan(kwds.k)) && ~all(isnan(kwds.nExt))
+    % User specified nExt and k
     k = kwds.k;
-end
-if all(isnan(kwds.nExt))
-    nExt = double(sw.mag_str.nExt);
-else
     nExt = kwds.nExt;
+elseif ~all(isnan(kwds.k))
+    % User specified k only
+    warning('Using user specified k, ignoring SpinW nExt and k values');
+    k = kwds.k;
+    [~, nExt] = rat(k(:), 1e-5);
+else
+    % User specified nExt only
+    warning('Using user specified nExt, ignoring SpinW nExt and k values');
+    nExt = kwds.nExt;
+    k = 1 ./ nExt;
 end
+
 assert(numel(nExt)==3,'the number of unit cell extensions, nExt, must be (1,3) or (3,1)')
 nExt = nExt(:);
 
@@ -54,22 +80,26 @@ trnm = diag( nExt );
 lens = sw.lattice.lat_const(:) .* nExt;
 angs = sw.lattice.angle(:); % SpinW stores angles in radian
 
-positions = sw.atom.r;  %(3,nAtoms)
-types = sw.atom.idx(:); %(nAtoms,1)
-if any(nExt > 1)
-    ijk = zeros(3, 1, prod(nExt));
-    l=1;
-    for i=1:nExt(1)
-    for j=1:nExt(2)
-    for k=1:nExt(3)
-        ijk(:,l) = [i;j;k];
-        l = l + 1;
-    end
-    end
-    end
-    positions = reshape( bsxfun(@plus,positions,ijk-1), [3, size(positions,2)*prod(nExt)]);
-    positions = bsxfun(@rdivide,positions,nExt);
-    types = repmat(types,[prod(nExt),1]);
-end
+%positions = sw.atom.r;  %(3,nAtoms)
+%types = sw.atom.idx(:); %(nAtoms,1)
+%if any(nExt > 1)
+%    ijk = zeros(3, 1, prod(nExt));
+%    l=1;
+%    for i=1:nExt(1)
+%       for j=1:nExt(2)
+%           for k=1:nExt(3)
+%               ijk(:,l) = [i;j;k];
+%               l = l + 1;
+%           end
+%       end
+%    end
+%    positions = reshape( bsxfun(@plus,positions,ijk-1), [3, size(positions,2)*prod(nExt)]);
+%    positions = bsxfun(@rdivide,positions,nExt);
+%    types = repmat(types,[prod(nExt),1]);
+%end
+
+% TODO
+latmat = [];
+latmat_primitive = [];
 
 [dlat,rlat]=brillem.lattice(lens,angs,'radian','direct','spgr',sw.lattice.label);
