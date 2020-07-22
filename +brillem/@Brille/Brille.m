@@ -49,7 +49,7 @@ classdef Brille < handle
     end
     methods
         function obj = Brille(ingrid,varargin)
-            inpt ={ 'fill'       , [ 1,-1], true, @(x)1+0*x
+            inpt ={ 'filler'     , [ 1,-1], true, @(x)1+0*x
                     'nfillval'   , [ 1, 1], true, []
                     'nfillvec'   , [ 1, 1], true, []
                     'max_volume' , [ 1, 1], true, 0.00001
@@ -62,7 +62,7 @@ classdef Brille < handle
                     'parallel'   , [ 1, 1], true, true
                     'formfact'   , [ 1, 1], true, false
                     'magneticion', [ 1,-4], true, ''
-                    'formfacfun' , [ 1, 1], true, @sw_mff
+                    'formfactfun', [ 1, 1], true, @sw_mff
                     'Qscale'     , [-5, -5], true, eye(4)
                     'Qtrans'     , [-6, -6], true, zeros(4)
                     };
@@ -73,11 +73,21 @@ classdef Brille < handle
             [kwds, ~] = brillem.readparam(sdef, varargin{:});
             % If the input is a SpinW object, automagically generate all required inputs
             if (strcmp(class(ingrid), 'spinw'))
-                obj.baseobj = ingrid;
-                [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume);
                 kwds.model = 'spinw';
+                obj.baseobj = ingrid;
+                magions = obj.baseobj.unit_cell.label;
+                if numel(magions) == 1 || all(cellfun(@(x) strcmp(x, magions{1}), magions))
+                    % Identical magnetic ions - interpolate Sab
+                    [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume, 'iscomplex', false);
+                    kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:});
+                    kwds.magneticion = obj.baseobj.unit_cell.label{1};
+                    kwds.formfact = false;
+                else
+                    % Non-identical magnetic ions, use eigenvectors
+                    [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume);
+                    kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:}, 'usevectors', true);
+                end
                 kwds.Qtrans = Qtrans;
-                kwds.fill = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:});
             end
             grid_dim = brillem.is_brille_grid(ingrid);
             obj.isQE = 4 == grid_dim;
@@ -112,14 +122,14 @@ classdef Brille < handle
                 end
             end
 
-            if iscell(kwds.fill)
-                fill = kwds.fill;
+            if iscell(kwds.filler)
+                filler = kwds.filler;
             else
-                fill = {kwds.fill};
+                filler = {kwds.filler};
             end
-            assert(iscell(fill) && all( cellfun(@(x)(isa(x,'function_handle')), fill) ));
-            obj.filler = fill;
-            obj.nFillers = length(fill);
+            assert(iscell(filler) && all( cellfun(@(x)(isa(x,'function_handle')), filler) ));
+            obj.filler = filler;
+            obj.nFillers = length(filler);
 
             % anything that defines 'varargout', including anonymous functions, returns negative nargout
             if ~isempty(kwds.nfillval) && isnumeric(kwds.nfillval) && isscalar(kwds.nfillval)
@@ -183,7 +193,7 @@ classdef Brille < handle
         QorQE = get_mapped(obj)
         fill(obj,varargin)
         [valres, vecres] = interpolate(obj,qh,qk,ql,en)
-        sqw = neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
+        [omega, S] = neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
         con = convolve_modes(obj,qh,qk,ql,en,omega,S,varargin)
     end
 end

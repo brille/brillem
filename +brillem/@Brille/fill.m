@@ -42,13 +42,15 @@ if ~strcmp(obj.parameterHash, newHash)
         end
     end
     equalmodes = std(mds)==0;
-    for i=1:nFill
-        if equalmodes
-            fillwith{i} = reshape( fillwith{i}, [num, mds(i), obj.span(i)] );
-        elseif length(obj.shape{i}) > 1
-            fillwith{i} = reshape( fillwith{i}, [num, prod(shape{i})] );
-        end
-    end
+%   for i=1:nFill
+%       if equalmodes
+%           fillwith{i} = reshape( fillwith{i}, [num, mds(i), obj.span(i)] );
+%           shape{i} = [mds(i), obj.span(i)];
+%       elseif length(obj.shape{i}) > 1
+%           fillwith{i} = reshape( fillwith{i}, [num, mds(i) * obj.span(i)] );
+%           shape{i} = [mds(i) * obj.span(i), 1];
+%       end
+%   end
 %   % and smash them together for input into the grid:
 %   if equalmodes
 %       fillwith = cat(3, fillwith{:});
@@ -66,26 +68,25 @@ if ~strcmp(obj.parameterHash, newHash)
     assert( all(cellfun(@(x,y) numel(x) == num * prod(y), fillwith, shape)) )
 
     pvals = brillem.m2p(fillwith{1});
-    nval = shape{1}(2);
-    if nval == 1
+    if obj.span(1) == 1
+        % Matlab ignores the trailing dimension if it's only 1.
         pvals = py.numpy.reshape(pvals, {int32(num), int32(shape{1}(1)), int32(1)});
     end
     if logical(obj.nFillVal) && logical(obj.nFillVec)
         obj.shapeval = shape{1};
         obj.shapevec = shape{2};
         pvecs = brillem.m2p(fillwith{2});
-        nvec = shape{2}(2);
-        if nvec == 1
+        if obj.span(2) == 1
             pvecs = py.numpy.reshape(pvecs, {int32(num), int32(shape{2}(1)), int32(1)});
         end
-        obj.pygrid.fill(pvals, {int32(nval)}, pvecs, {int32(shape{2}(2))});
+        obj.pygrid.fill(pvals, {int32(obj.span(1))}, pvecs, {int32(obj.span(2))});
     else
         if logical(obj.nFillVal)
             obj.shapeval = shape{1};
         else
             obj.shapevec = shape{1};
         end
-        obj.pygrid.fill(pvals, {int32(nval)});
+        obj.pygrid.fill(pvals, {int32(obj.span(1))});
     end
 
     % we have successfully filled the grid(s), so store the hash.

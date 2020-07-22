@@ -15,7 +15,15 @@
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 function [bzg,trnm] = spinw2bzg(sw,varargin)
-[~,rlat,trnm]=brillem.spinw2lat(sw,varargin{:});
-bz = brillem.brillouinzone(rlat,varargin{:});
-bzg = brillem.BZTrellisQ(bz,varargin{:},'complex_vectors',true);
+d.names = {'iscomplex'};
+d.defaults = {true};
+[kwds, extras] = brillem.readparam(d, varargin{:});
+keys = fieldnames(extras);
+for ik = 1:numel(keys)
+    vars{2*(ik-1)+1} = keys{ik};
+    vars{2*(ik-1)+2} = extras.(keys{ik});
+end
+[~,rlat,trnm]=brillem.spinw2lat(sw, vars{:});
+bz = brillem.brillouinzone(rlat, vars{:});
+bzg = brillem.BZTrellisQ(bz, vars{:}, 'complex_vectors', kwds.iscomplex);
 end
