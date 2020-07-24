@@ -90,6 +90,7 @@ classdef Brille < handle
                     % Non-identical magnetic ions, use eigenvectors
                     [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume);
                     kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:}, 'usevectors', true);
+                    kwds.usevect = true;
                 end
                 kwds.Qtrans = Qtrans;
             end
@@ -155,7 +156,11 @@ classdef Brille < handle
                         nfillval = 1;
                         nfillvec = 1;
                         rlu = true;
-                        interpret = { @obj.neutron_spinwave_intensity, @obj.convolve_modes };
+                        if kwds.usevect
+                            interpret = { @obj.sw_sab, @obj.neutron_spinwave_intensity, @obj.convolve_modes };
+                        else
+                            interpret = { @obj.neutron_spinwave_intensity, @obj.convolve_modes };
+                        end
                         nret = [2,1];
                         fshapeval = {1}; % filler produces 1 energy and a 3x3 matrix per Q
                         fshapevec = {[3,3]};
