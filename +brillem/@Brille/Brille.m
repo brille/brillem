@@ -65,6 +65,7 @@ classdef Brille < handle
                     'formfactfun', [ 1, 1], true, @sw_mff
                     'Qscale'     , [-5, -5], true, eye(4)
                     'Qtrans'     , [-6, -6], true, zeros(4)
+                    'usevect'    , [ 1, 1], true, false
                     };
             sdef.names = inpt(:,1);
             sdef.sizes = inpt(:,2);
@@ -73,10 +74,13 @@ classdef Brille < handle
             [kwds, ~] = brillem.readparam(sdef, varargin{:});
             % If the input is a SpinW object, automagically generate all required inputs
             if (strcmp(class(ingrid), 'spinw'))
+                if ingrid.symbolic
+                    error('Symbollic mode not supported with Brille');
+                end
                 kwds.model = 'spinw';
                 obj.baseobj = ingrid;
                 magions = obj.baseobj.unit_cell.label;
-                if numel(magions) == 1 || all(cellfun(@(x) strcmp(x, magions{1}), magions))
+                if (numel(magions) == 1 || all(cellfun(@(x) strcmp(x, magions{1}), magions))) && ~kwds.usevect
                     % Identical magnetic ions - interpolate Sab
                     [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume, 'iscomplex', false);
                     kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:});
@@ -137,6 +141,8 @@ classdef Brille < handle
             end
             if ~isempty(kwds.nfillvec) && isnumeric(kwds.nfillvec) && isscalar(kwds.nfillvec)
                 nfillvec = kwds.nfillvec;
+            else
+                nfillvec = [];
             end
             fshapeval = kwds.shapeval; % what is the shape of each filler output
             fshapevec = kwds.shapevec;
@@ -176,7 +182,8 @@ classdef Brille < handle
             if ~iscell(fshapevec)
                 fshapevec = {fshapevec};
             end
-            assert( ~isempty(fshapevec) && ~isempty(fshapeval) && numel(fshapeval) == nfillval && numel(fshapevec) == nfillvec, 'We need to know the shape of the filler output(s)' );
+            assert( ~isempty(fshapeval) && exist('nfillval') && numel(fshapeval) == nfillval, ...
+                'We need to know the shape of the filler output(s), please at least specify ''nfillval'' and ''shapeval''' );
 
             assert( nret(end) == 1, 'the last interpreter function should return a scalar!');
             obj.nFillVal = nfillval;
