@@ -15,7 +15,13 @@ hkl = [Qh(:) Qk(:) Ql(:)]';
 
 if kwds.usevectors
     spec = swobj.spinwave(hkl, vars{:}, 'saveV', true, 'sortMode', false);
-    eigvec = permute(spec.V, [3 1 2]);
+    if (size(spec.omega, 1) / size(spec.V, 1)) == 3 && (size(spec.V, 3) / size(spec.omega, 2)) == 3
+        % Incommensurate
+        kmIdx = repmat(sort(repmat([1 2 3],1,size(spec.omega, 2))),1,1);
+        eigvec = permute(cat(1, spec.V(:,:,kmIdx==1), spec.V(:,:,kmIdx==2), spec.V(:,:,kmIdx==3)), [3 1 2]);
+    else
+        eigvec = permute(spec.V, [3 1 2]);
+    end
 else
     spec = swobj.spinwave(hkl, vars{:}, 'sortMode', false, 'formfact', false);
     eigvec = permute(real(spec.Sab), [4 3 1 2]);

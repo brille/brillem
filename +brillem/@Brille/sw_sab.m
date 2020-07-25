@@ -32,6 +32,7 @@ if isempty(obj.baseobj) || ~strcmp(class(obj.baseobj), 'spinw')
 end
 swobj = obj.baseobj;
 hkl = cat(2, qh, qk, ql)';
+V0 = permute(V0, [2 3 1]);
 
 d.names = {'optmem' 'tol'  'formfact' 'formfactfun' 'gtensor' 'cmplxBase'};
 d.defaults = {0     1e-4   false      @sw_mff       false     false      };
@@ -58,16 +59,21 @@ helical =  sum(abs(mod(abs(2*km)+tol,1)-tol).^2) > tol;
 % number of Q points
 nHkl0 = size(hkl,2);
 nHkl = nHkl0;
-hkl0 = hkl;
 if incomm
+    % Reshape interpolated eigenvectors (from nQ x nMode x 3*nMode to 3*nQ x nMode x nMode)
+    kmIdx = repmat(sort(repmat([1 2 3],1,size(V0,2))),1,1);
+    V0 = cat(3, V0(kmIdx==1,:,:), V0(kmIdx==2,:,:), V0(kmIdx==3,:,:));
     % TODO
     if ~helical
         warning('spinw:spinwave:Twokm',['The two times the magnetic ordering '...
             'wavevector 2*km = G, reciproc lattice vector, use magnetic supercell to calculate spectrum!']);
     end
+    hkl0 = [hkl hkl hkl];
     hkl = [bsxfun(@minus,hkl,km') hkl bsxfun(@plus,hkl,km')];
     nHkl  = nHkl*3;
     nHkl0 = nHkl0*3;
+else
+    hkl0 = hkl;
 end
 
 % Create the interaction matrix and atomic positions in the extended
@@ -170,9 +176,9 @@ for jj = 1:nSlice
     % q values without the +/-k_m vector
     hklExt0MEM = hklExt0(:,hklIdxMEM);
     nHklMEM = size(hklIdxMEM,1);
-
+    
     % Use Brille interpolated energy and eigenvectors
-    V = permute(V0(hklIdxMEM,:,:), [2 3 1]);
+    V = V0(:,:,hklIdxMEM);
 
     % Calculates correlation functions.
     % V right
