@@ -1,16 +1,17 @@
-function Sab = sw_sab(obj, qh, qk, ql, V0, varargin)
+function [omega, Sab] = sw_sab(obj, qh, qk, ql, en, omega, V0, varargin)
 % calculates spin correlation tensor Sab using the interpolated eigenvectors of a linear spin wave theory model
 % Note that this function only works if the Brille object was initialised using a SpinW object.
 %
 % ### Syntax
 %
-% `Sab = sw_sab(brillobj, qh, qk, ql, V)`
+% `Sab = sw_sab(brillobj, qh, qk, ql, en, V)`
 %
 % `Sab = spinwave(___,Name,Value)`
 %
 % ### Description
 %
 % qh, qk, ql  - input hkl vectors (needed for form factor calculation)
+% en          - energy vector - not used (needed due to Brille syntax, can be empty)
 % V           - input interpolated eigenvectors
 % Sab         - output S^{alpha,beta} tensor.
 %
@@ -253,12 +254,9 @@ if incomm
     % exchange matrices
     Sab   = cat(3,mmat(Sab(:,:,:,kmIdx==1),K1), mmat(Sab(:,:,:,kmIdx==2),K2), ...
         mmat(Sab(:,:,:,kmIdx==3),conj(K1)));
-    
-    hkl   = hkl(:,kmIdx==2);
-    nHkl0 = nHkl0/3;
-else
-    helical = false;
 end
+
+Sab = permute(Sab, [4 3 1 2]); % Converts back to Brille convention
 
 if ~param.gtensor && any(swobj.single_ion.g)
     warning('spinw:spinwave:NonZerogTensor',['The SpinW model defines a '...

@@ -46,6 +46,8 @@ classdef Brille < handle
         Qscale = eye(4);   % An optional multiplicitive transformation of (Q,E)
         Qtrans = eye(4);   % An optional translational transformation of (Q,E)
         baseobj            % Base (calculator) object (e.g. SpinW object)
+        twin               % Structure with information on twins
+        sab_calc           % Function or cell of functions to obtain Sab
     end
     methods
         function obj = Brille(ingrid,varargin)
@@ -63,9 +65,11 @@ classdef Brille < handle
                     'formfact'   , [ 1, 1], true, false
                     'magneticion', [ 1,-4], true, ''
                     'formfactfun', [ 1, 1], true, @sw_mff
-                    'Qscale'     , [-5, -5], true, eye(4)
-                    'Qtrans'     , [-6, -6], true, zeros(4)
+                    'Qscale'     , [-5,-5], true, eye(4)
+                    'Qtrans'     , [-6,-6], true, zeros(4)
                     'usevect'    , [ 1, 1], true, false
+                    'twin'       , [ 1, 1], true, []
+                    'sab_calc'   , [ 1,-3], true, []
                     };
             sdef.names = inpt(:,1);
             sdef.sizes = inpt(:,2);
@@ -73,7 +77,7 @@ classdef Brille < handle
             sdef.defaults = inpt(:,4);
             [kwds, ~] = brillem.readparam(sdef, varargin{:});
             % If the input is a SpinW object, automagically generate all required inputs
-            if (strcmp(class(ingrid), 'spinw'))
+            if isa(ingrid, 'spinw')
                 if ingrid.symbolic
                     error('Symbollic mode not supported with Brille');
                 end
@@ -86,13 +90,16 @@ classdef Brille < handle
                     kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:});
                     kwds.magneticion = obj.baseobj.unit_cell.label{1};
                     kwds.formfact = false;
+                    kwds.sab_calc = { @obj.interpolate };
                 else
                     % Non-identical magnetic ions, use eigenvectors
                     [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume);
                     kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:}, 'usevectors', true);
                     kwds.usevect = true;
+                    kwds.sab_calc = { @obj.interpolate, @obj.sw_sab };
                 end
                 kwds.Qtrans = Qtrans;
+                kwds.twin = obj.baseobj.twin;
             end
             grid_dim = brillem.is_brille_grid(ingrid);
             obj.isQE = 4 == grid_dim;
@@ -125,6 +132,13 @@ classdef Brille < handle
                 elseif numel(kwds.Qtrans)==9
                     obj.Qtrans([1,2,3,5,6,7,9,10,11])=kwds.Qtrans(:);
                 end
+            end
+            if ~isempty(kwds.twin)
+                obj.twin = kwds.twin;
+            end
+            if ~isempty(kwds.sab_calc)
+                assert(iscell(kwds.sab_calc) && all( cellfun(@(x)(isa(x,'function_handle')), kwds.sab_calc) ));
+                obj.sab_calc = kwds.sab_calc;
             end
 
             if iscell(kwds.filler)

@@ -15,15 +15,38 @@ hkl = [Qh(:) Qk(:) Ql(:)]';
 
 if kwds.usevectors
     spec = swobj.spinwave(hkl, vars{:}, 'saveV', true, 'sortMode', false);
-    if (size(spec.omega, 1) / size(spec.V, 1)) == 3 && (size(spec.V, 3) / size(spec.omega, 2)) == 3
+    [omega, V] = parse_twin(spec);
+    if (size(omega, 1) / size(V, 1)) == 3 && (size(V, 3) / size(omega, 2)) == 3
         % Incommensurate
-        kmIdx = repmat(sort(repmat([1 2 3],1,size(spec.omega, 2))),1,1);
-        eigvec = permute(cat(1, spec.V(:,:,kmIdx==1), spec.V(:,:,kmIdx==2), spec.V(:,:,kmIdx==3)), [3 1 2]);
+        kmIdx = repmat(sort(repmat([1 2 3],1,size(omega, 2))),1,1);
+        eigvec = permute(cat(1, V(:,:,kmIdx==1), V(:,:,kmIdx==2), V(:,:,kmIdx==3)), [3 1 2]);
     else
-        eigvec = permute(spec.V, [3 1 2]);
+        eigvec = permute(V, [3 1 2]);
     end
 else
     spec = swobj.spinwave(hkl, vars{:}, 'sortMode', false, 'formfact', false);
-    eigvec = permute(real(spec.Sab), [4 3 1 2]);
+    [omega, Sab] = parse_twin(spec, 'Sab');
+    eigvec = permute(real(Sab), [4 3 1 2]);
 end
-eigval = permute(real(spec.omega), [2 1]);
+eigval = permute(real(omega), [2 1]);
+
+end
+
+function [omega, V] = parse_twin(spec, use_Sab)
+    if iscell(spec.omega)
+        % Has twins
+        omega = spec.omega{1};
+        if nargin > 1 && use_Sab
+            V = spec.Sab{1};
+        else
+            V = spec.V{1};
+        end
+    else
+        omega = spec.omega;
+        if nargin > 1 && all(logical(use_Sab))
+            V = spec.Sab;
+        else
+            V = spec.V;
+        end
+    end
+end

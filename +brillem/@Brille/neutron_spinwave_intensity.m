@@ -15,7 +15,7 @@
 % You should have received a copy of the GNU Affero General Public License
 % along with brille. If not, see <https://www.gnu.org/licenses/>.
 
-function [omega, S] = neutron_spinwave_intensity(obj,qh,qk,ql,omega,Sab,varargin)
+function [omega, S] = neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
 assert( numel(qh)==numel(qk) && numel(qk)==numel(ql)...
      && numel(qh)==numel(ql),    'Expected matching numel arrays');
 assert( all(size(qh)==size(qk)) && all(size(qk)==size(ql)) ...
@@ -25,7 +25,7 @@ if numel(qh) ~= size(qh,1)
     qh = qh(:);
     qk = qk(:);
     ql = ql(:);
-%     en = en(:);
+%    en = en(:);
 end
 nQ = numel(qh);
 Q = cat(2,qh,qk,ql);

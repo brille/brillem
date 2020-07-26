@@ -102,4 +102,10 @@ angs = sw.lattice.angle(:); % SpinW stores angles in radian
 latmat = [];
 latmat_primitive = [];
 
-[dlat,rlat]=brillem.lattice(lens,angs,'radian','direct','spgr',sw.lattice.label);
+spg = sw.lattice.label;
+try
+    py.brille.Direct([4 4 4], [90 90 90], spg);
+catch
+    spg = 'P 1';
+end
+[dlat,rlat]=brillem.lattice(lens,angs,'radian','direct','spgr',spg);
