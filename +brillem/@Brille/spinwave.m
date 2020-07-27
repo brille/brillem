@@ -12,6 +12,8 @@ function spectra = spinwave(obj, hkl, varargin)
 % `Q` - a $[3\times n_{Q}]$ matrix of q-points or a cell array of points
 %       defining lines in Q-space (in SpinW notation).
 %
+% All other keyword-value argument pairs will be passed to the functions which
+% calculates the interpolated dispersion / structure factors.
 
 if iscell(hkl) && length(hkl)>1
     hkl = qscanlines(hkl);

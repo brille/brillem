@@ -83,10 +83,10 @@ function sqw = horace_sqw(obj,qh,qk,ql,en,pars,varargin) % split varagin into fi
 %                                     as q{1} i.e. qh
 %
 
-inpForm.fname  = {'partrans' 'coordtrans' 'mat'};
-inpForm.defval = {@(y)y      eye(4)       []};
-inpForm.size   = {[1 1]      [4 4]        [1 -1]};
-inpForm.soft   = {false      false        false};
+inpForm.names    = {'partrans' 'coordtrans' 'mat'};
+inpForm.defaults = {@(y)y      eye(4)       []};
+inpForm.sizes    = {[1 1]      [4 4]        [1 -1]};
+inpForm.soft     = {false      false        false};
 [kwds, dict] = brillem.readparam(inpForm, varargin{:});
 
 % dict is a struct with any extra name-value pairs, we want to turn this
@@ -142,7 +142,44 @@ if sum(sum(abs(kwds.coordtrans - eye(4)))) > 0
     clear qc;
 end
 
-intres=obj.interpolate(qh,qk,ql,en);
+if ~isempty(obj.sab_calc)
+    if ~isempty(obj.twin) && (numel(obj.twin.vol) > 1 || sum(sum(abs(obj.twin.rotc(:,:,1) - eye(3)))) > 0)
+        [qht, qkt, qlt, ent] = obj.twinq(qh, qk, ql, en);
+        istwinned = true;
+    else
+        qht = {qh}; qkt = {qk}; qlt = {ql}; ent = {en}; 
+        istwinned = false;
+    end
+    for ic = 1:numel(qht)
+        intres = {};
+        for i=1:obj.nInt
+            newintres = cell(1, 2);
+            [newintres{:}] = obj.sab_calc{i}(qht{ic},qkt{ic},qlt{ic},ent{ic},intres{:},interpinpt{:});
+            intres = newintres;
+        end
+        omega{ic} = intres{1};
+        Sab{ic} = intres{2};
+    end
+    if istwinned
+        % Rotate the calculated correlation function into the twin coordinate system using rotC
+        nTwin = numel(obj.twin.vol);
+        SabAll = cell(1,nTwin);
+        for ii = 1:nTwin
+            Sab{ii} = permute(Sab{ii}, [3 4 2 1]);
+            sSabT  = size(Sab{ii});                % size of the correlation function matrix
+            SabT   = reshape(Sab{ii},3,3,[]);      % convert the matrix into cell of 3x3 matrices
+            rotC   = obj.twin.rotc(:,:,ii);        % select the rotation matrix of twin ii
+            SabRot = arrayfun(@(idx)(rotC*SabT(:,:,idx)*(rotC')),1:size(SabT,3),'UniformOutput',false);
+            SabRot = cat(3,SabRot{:});             % rotate correlation function using arrayfun
+            SabAll{ii} = reshape(SabRot,sSabT);    % resize back the correlation matrix
+            SabAll{ii} = permute(SabAll{ii}, [4 3 1 2]);
+        end
+        Sab = SabAll;
+    end
+    intres = {real(cell2mat(omega)) cell2mat(Sab)};
+else
+    intres = obj.interpolate(qh,qk,ql,en);
+end
 
 % and then use the interpreter function(s) to convert this to S(Q,E)
 for i=1:obj.nInt

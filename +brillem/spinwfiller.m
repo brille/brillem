@@ -1,12 +1,14 @@
 function [eigval, eigvec] = spinwfiller(swobj, Qh, Qk, Ql, varargin)
 
+if mod(numel(varargin),2) == 1
+    varargin = varargin(2:end);
+end
 d.names = {'usevectors'};
 d.defaults = {false};
 [kwds, extras] = brillem.readparam(d, varargin{:});
 keys = fieldnames(extras);
-vars = cell(numel(keys)*2);
-for ik = 1:numel(keys)
-    
+vars = cell(1, numel(keys)*2);
+for ik = 1:numel(keys)    
     vars{2*(ik-1)+1} = keys{ik};
     vars{2*(ik-1)+2} = extras.(keys{ik});
 end

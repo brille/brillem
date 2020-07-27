@@ -170,12 +170,8 @@ classdef Brille < handle
                         nfillval = 1;
                         nfillvec = 1;
                         rlu = true;
-                        if kwds.usevect
-                            interpret = { @obj.sw_sab, @obj.neutron_spinwave_intensity, @obj.convolve_modes };
-                        else
-                            interpret = { @obj.neutron_spinwave_intensity, @obj.convolve_modes };
-                        end
-                        nret = [2,1];
+                        interpret = { @obj.neutron_spinwave_intensity, @obj.convolve_modes };
+                        nret = [2, 1];
                         fshapeval = {1}; % filler produces 1 energy and a 3x3 matrix per Q
                         fshapevec = {[3,3]};
                 end

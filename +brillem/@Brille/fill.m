@@ -68,6 +68,7 @@ if ~strcmp(obj.parameterHash, newHash)
     assert( all(cellfun(@(x,y) numel(x) == num * prod(y), fillwith, shape)) )
 
     pvals = brillem.m2p(fillwith{1});
+    nvals = {int32(obj.span(1))};
     if obj.span(1) == 1
         % Matlab ignores the trailing dimension if it's only 1.
         pvals = py.numpy.reshape(pvals, {int32(num), int32(shape{1}(1)), int32(1)});
@@ -79,7 +80,17 @@ if ~strcmp(obj.parameterHash, newHash)
         if obj.span(2) == 1
             pvecs = py.numpy.reshape(pvecs, {int32(num), int32(shape{2}(1)), int32(1)});
         end
-        obj.pygrid.fill(pvals, {int32(obj.span(1))}, pvecs, {int32(obj.span(2))});
+        % The next list of int32 is: number of scalar-like, number of vector-like, number of matrix-like elements,
+        %   the RotatesLike entry: 0 = Realspace, 1 = Reciprocal, 2 = RealspaceAxial, 3 = PhononGamma
+        % then: index of cost function for scalar-like, vector-like and matrix-like elements (should be all 0).
+        %rotlike = 0;
+        %if endsWith(class(obj.pygrid), 'dd');
+        %    nvecs = {int32(0), int32(0), int32(obj.span(2)), int32(rotlike), int32(0), int32(0), int32(0)};
+        %else
+        %    nvecs = {int32(obj.span(2)), int32(0), int32(0), int32(rotlike), int32(0), int32(0), int32(0)};
+        %end
+        nvecs = {int32(obj.span(2))};
+        obj.pygrid.fill(pvals, nvals, pvecs, nvecs);
     else
         if logical(obj.nFillVal)
             obj.shapeval = shape{1};
