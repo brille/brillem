@@ -13,7 +13,7 @@
 %
 % You should have received a copy of the GNU General Public License
 
-function [valres, vecres] = interpolate(obj,qh,qk,ql,en)
+function [valres, vecres] = interpolate(obj,qh,qk,ql,en,varargin)
 % The python module expects an (N,3)
 iat = cat(2,qh,qk,ql);
 % or (N,4), if isQE is true

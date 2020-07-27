@@ -218,7 +218,7 @@ classdef Brille < handle
         sqw = horace_sqw(obj,qh,qk,ql,en,varargin)
         QorQE = get_mapped(obj)
         fill(obj,varargin)
-        [valres, vecres] = interpolate(obj,qh,qk,ql,en)
+        [valres, vecres] = interpolate(obj,qh,qk,ql,en,varargin)
         [omega, S] = neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
         con = convolve_modes(obj,qh,qk,ql,en,omega,S,varargin)
     end
