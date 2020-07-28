@@ -17,7 +17,7 @@
 function isok = test()
 isok=false;
 
-[d,r] = brillem.lattice([2*pi,2*pi,2*pi],[90,90,120],'deg', 'direct');
+[d,r] = brillem.lattice([2*pi,2*pi,2*pi],[90,90,120],'direct');
 
 if     ~isapprox(r.a, 2*pi/d.a/sin(d.gamma))
     return;
@@ -31,9 +31,9 @@ if ~throws_message('A single py.brille._brille.Reciprocal lattice is required as
     return;
 end
 bz = brillem.brillouinzone(r);
-if bz.faces.shape{1}~=8 || bz.faces.shape{2}~=3
+if bz.normals.shape{1}~=8 || bz.normals.shape{2}~=3
     return;
-elseif bz.faces_per_vertex.shape{1}~=12 || bz.faces_per_vertex.shape{2}~=3
+elseif size(bz.faces_per_vertex,2)~=12
     return;
 elseif bz.vertices.shape{1}~=12||bz.vertices.shape{2}~=3
     return;
@@ -42,31 +42,35 @@ end
 if ~throws_message('A single py.brille._brille.BrillouinZone is required as input',@brillem.BZTrellisQ,r)
     return;
 end
-bzg = brillem.BZTrellisQ(bz,'N',[5,5,5]);
-if bzg.map.shape{1} ~=10 || bzg.map.shape{2} ~=10 || bzg.map.shape{3} ~= 10
-    return;
-elseif bzg.grid_rlu.shape ~= bzg.grid_invA.shape
-    return;
-elseif bzg.rlu.shape ~= bzg.invA.shape
+bzg = brillem.BZTrellisQ(bz,'max_volume',0.0001);
+if bzg.rlu.shape ~= bzg.invA.shape
     return;
 end
 % more tests?
 [~,r]=brillem.lattice(2*pi*[1,1,1],90*[1,1,1]);
 bz=brillem.brillouinzone(r);
-bzg = brillem.BZTrellisQ(bz,'N',[10,10,10]);
+bzg = brillem.BZTrellisQ(bz,'max_volume',0.0001);
 sq = @(Q)( cat(2, Q(:,1),Q(:,2)+0.5*Q(:,3)) ); % replace with any function linear in the components of Q
-bzg.fill( py.numpy.array( sq(double(bzg.rlu)) ) );
+gridvals = py.numpy.array(sq(double(bzg.rlu)));
+gridels = brillem.m2p([2,0,0],'int');
+bzg.fill(gridvals, gridels, gridvals, gridels, true);
 qrand = (rand(30,3)-0.5);
-intsq = double( bzg.interpolate_at( py.numpy.array(qrand) ) );
-if ~all(all(abs(sq(qrand) - intsq) < 8*eps()*abs(sq(qrand) + intsq))) % 8*eps() since the interpolation is the sum of 8 terms
+ret = bzg.interpolate_at(py.numpy.array(qrand));
+retvals = brillem.p2m(ret{1});
+retvecs = brillem.p2m(ret{2});
+if ~all(all(isapprox(retvals, retvecs)))
+    return;
+end
+if ~all(all(isapprox(retvals, sq(qrand), 8)))
     return;
 end
 
 isok=true;
 end
 
-function tf=isapprox(a,b)
-tf = abs(a-b) < abs(a+b)*eps();
+function tf=isapprox(a,b,tol)
+if nargin<3 || isempty(tol); tol=1; end
+tf = abs(a-b) < abs(a+b)*tol*eps();
 end
 function tf=throws_message(m,f,varargin)
     tf = false;

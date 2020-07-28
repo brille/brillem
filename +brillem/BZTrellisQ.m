@@ -20,7 +20,7 @@ d.defaults = {false, false, 0.1};
 [kwds, dict] = brillem.readparam(d, varargin{:});
 
 reqInType = 'py.brille._brille.BrillouinZone';
-assert(isa(BrillouinZone,reqInType), ['A single',reqInType,' is required as input']);
+assert(isa(BrillouinZone,reqInType), ['A single ',reqInType,' is required as input']);
 
 % Convert the extra values to Python equivalents and make a cellarray (again)
 keys = fieldnames(dict);

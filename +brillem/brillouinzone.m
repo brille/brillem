@@ -20,7 +20,7 @@ d.defaults = {1};
 kwds = brillem.readparam(d, varargin{:});
 
 reqInType = 'py.brille._brille.Reciprocal';
-assert(isa(Reciprocal,reqInType), ['A single',reqInType,' lattice is required as input']);
+assert(isa(Reciprocal,reqInType), ['A single ',reqInType,' lattice is required as input']);
 
 bz = py.brille.BrillouinZone( Reciprocal, int32(kwds.extent));
 end
