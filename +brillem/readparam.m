@@ -14,7 +14,7 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-% This function is a sw_readparam from spinw modified to take an empty
+% This function is sw_readparam from spinw modified to take an empty
 % format struct and also to return all key-value pairs not in format.
 
 function [input, extras] = readparam(format, varargin)
@@ -101,15 +101,15 @@ usedField = false(1,numel(rName));
 
 % Go through all fields.
 for ii = 1:length(fName)
-    
+
     rawIdx = find(strcmpi(rName,fName{ii}));
-    
+
     if any(rawIdx)
         rawIdx = rawIdx(1);
         usedField(rawIdx) = true;
-        
+
         inputValid = true;
-        
+
         % Go through all dimension of the selected field to check size.
         if isfield(format, 'sizes')
             for jj = 1:length(format.sizes{ii})
@@ -124,7 +124,7 @@ for ii = 1:length(fName)
                         if storeSize(-format.sizes{ii}(jj)) ~= size(raw.(rName{rawIdx}),jj)
                             inputValid = false;
                         end
-                        
+
                     end
                 end
             end

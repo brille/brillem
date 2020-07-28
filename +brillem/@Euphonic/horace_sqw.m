@@ -33,7 +33,7 @@ function sqw = horace_sqw(obj,qh,qk,ql,en,input_pars,varargin)
 %              Some keywords control aspects of this function:
 %              'coordtrans' - a matrix to transform the input coordinates
 %                             (qh,qk,ql,en) before being sent to the
-%                             py.brille.euphonic.BrEu object's method.
+%                             py.brille.euphonic.BrillEu object's method.
 %                             [default: eye(4) % identity]
 %
 %              Any additional keyword parameters will be passed to SymSim
@@ -90,6 +90,12 @@ matkeys.sizes = {[4,4]};
 assert(ismatrix(input_pars) && isnumeric(input_pars), 'Numeric matrix input parameters are required')
 
 nQ = numel(qh);
+memmult = 11; % Fudge-factor based on NDLT1145 (Win10, 32GB RAM)
+excess_bytes = brillem.excess_memory(obj.pyobj.grid, nQ, memmult);
+if excess_bytes < 0
+    error('Not enough free memory! Estimated shortfall %g bytes',excess_bytes);
+end
+
 inshape = size(qh);
 if size(qh,1) ~= nQ
     qh = qh(:);
@@ -138,7 +144,7 @@ dict.temperature = temp;
 if ~isempty(pars)
     dict.param = pars;
 end
-sqw = brillem.p2m( obj.pyobj.s_qw(Q, brille.m2p(en), py.dict(dict)) );
+sqw = brillem.p2m( obj.pyobj.s_qw(Q, brillem.m2p(en), py.dict(dict)) );
 
 if size(sqw) ~= inshape
   sqw = reshape(sqw, inshape);

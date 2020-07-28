@@ -19,26 +19,35 @@ classdef Euphonic < handle
     pyobj
   end
   methods
-    function obj = Euphonic(euphonic, varargin)
+    function obj = Euphonic(filename, varargin)
       % Ensure that the versions of Euphonic and brillem are as expected
-      brillem.verify_python_modules('euphonic','0.3.0', 'brilleu','0.1.0');
+      brillem.verify_python_modules('euphonic','0.3.0', 'brilleu','0.2.1');
       % separate MATLAB name-value pairs and Python name-value pairs:
-      % For now there are no key-value pairs which control behaviour on the
-      % MATLAB side, so we provide an empty struct to readparam:
-      [~, kwds] = brillem.readparam(struct(), varargin{:});
-      % Verify that euphonic is a ForceConstants object:
-      assert( isa(euphonic,'py.euphonic.force_constants.ForceConstants') )
+      kv.names = {'castep', 'phonopy'};
+      kv.defaults={true, false};
+      [matkwds, kwds] = brillem.readparam(kv, varargin{:});
+      % Verify that filename is the name of a file or folder:
+      assert( isa(filename, 'char') )
       % Extract just the names from the pairs
       keys = fieldnames(kwds);
       % Convert the values to Python equivalents and make a cellarray (again)
-      pykwds = cell(2*numel(keys),1);
+      kwdscell = cell(2*numel(keys),1);
       for i=1:numel(keys)
-        pykwds{2*(i-1)+1} = keys{i};
-        pykwds{2*(i-1)+2} = brillem.m2p(kwds.(keys{i}));
+        kwdscell{2*(i-1)+1} = keys{i};
+        kwdscell{2*(i-1)+2} = brillem.m2p(kwds.(keys{i}));
       end
-      % Finally pass the py.Euphonic.ForceConstants object and optional
+      pykwds = pyargs(kwdscell{:});
+      % Grab a handle to the brilleu python module:
+      pybe = py.importlib.import_module('brilleu');
+      % Finally pass the filename/directory-path and optional
       % arguments to the py.brilleu.BrillEu constructor
-      obj.pyobj = py.brilleu.BrillEu(euphonic, pyargs(pykwds{:}));
+      if matkwds.phonopy
+        assert( exist(filename, 'dir') )
+        obj.pyobj = pybe.BrillEu.from_phonopy(filename, pykwds);
+      else
+        assert( exist(filename, 'file') && ~exist(filename, 'dir') )
+        obj.pyobj = pybe.BrillEu.from_castep(filename, pykwds);
+      end
     end % intializer
     sqw = horace_sqw(obj,qh,qk,ql,en,varargin)
     wq  = w_q(obj,qh,qk,ql,varargin)
