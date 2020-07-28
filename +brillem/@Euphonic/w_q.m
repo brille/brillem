@@ -55,9 +55,9 @@ if sum(sum(abs(kwds.coordtrans - eye(4)))) > 0
     ql = sum(bsxfun(@times, kwds.coordtrans(3,:), qc),2);
     clear qc;
 end
-Q = brille.m2p(cat(2,qh,qk,ql));
+Q = brillem.m2p(cat(2,qh,qk,ql));
 
-wq = brille.p2m(obj.pyobj.w_q(Q, py.dict(dict)));
+wq = brillem.p2m(obj.pyobj.w_q(Q, py.dict(dict)));
 
 wq_size = size(wq);
 if wq_size(1:end-1) ~= inshape
