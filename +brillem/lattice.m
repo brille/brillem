@@ -26,7 +26,7 @@ d.names = {'spgr'};
 d.defaults = {'P 1'};
 kwds = brillem.readparam(d, varargin{:});
 
-
+% Brille will automatically deduce if angles given in degrees or radians
 assert(numel(lens)>=3 && numel(angs)>=3)
 pylens =brillem.m2p( lens(1:3) );
 pyangs =brillem.m2p( angs(1:3) );

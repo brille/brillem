@@ -45,12 +45,16 @@ classdef Brille < handle
         formfactfun        % What function calculates the form factor
         Qscale = eye(4);   % An optional multiplicitive transformation of (Q,E)
         Qtrans = eye(4);   % An optional translational transformation of (Q,E)
+        baseobj            % Base (calculator) object (e.g. SpinW object)
+        twin               % Structure with information on twins
+        sab_calc           % Function or cell of functions to obtain Sab
     end
     methods
         function obj = Brille(ingrid,varargin)
-            inpt ={ 'fill'       , [ 1,-1], true, @(x)1+0*x
+            inpt ={ 'filler'     , [ 1,-1], true, @(x)1+0*x
                     'nfillval'   , [ 1, 1], true, []
                     'nfillvec'   , [ 1, 1], true, []
+                    'max_volume' , [ 1, 1], true, 0.00001
                     'shapeval'   , [ 1,-7], true, []
                     'shapevec'   , [ 1,-7], true, []
                     'model'      , [ 1,-2], true, ''
@@ -60,15 +64,43 @@ classdef Brille < handle
                     'parallel'   , [ 1, 1], true, true
                     'formfact'   , [ 1, 1], true, false
                     'magneticion', [ 1,-4], true, ''
-                    'formfacfun' , [ 1, 1], true, @sw_mff
-                    'Qscale'     , [-5, -5], true, eye(4)
-                    'Qtrans'     , [-6, -6], true, zeros(4)
+                    'formfactfun', [ 1, 1], true, @sw_mff
+                    'Qscale'     , [-5,-5], true, eye(4)
+                    'Qtrans'     , [-6,-6], true, zeros(4)
+                    'usevect'    , [ 1, 1], true, false
+                    'twin'       , [ 1, 1], true, []
+                    'sab_calc'   , [ 1,-3], true, []
                     };
             sdef.names = inpt(:,1);
             sdef.sizes = inpt(:,2);
             sdef.soft = inpt(:,3);
             sdef.defaults = inpt(:,4);
             [kwds, ~] = brillem.readparam(sdef, varargin{:});
+            % If the input is a SpinW object, automagically generate all required inputs
+            if isa(ingrid, 'spinw')
+                if ingrid.symbolic
+                    error('Symbollic mode not supported with Brille');
+                end
+                kwds.model = 'spinw';
+                obj.baseobj = ingrid;
+                magions = obj.baseobj.unit_cell.label;
+                if (numel(magions) == 1 || all(cellfun(@(x) strcmp(x, magions{1}), magions))) && ~kwds.usevect
+                    % Identical magnetic ions - interpolate Sab
+                    [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume, 'iscomplex', false);
+                    kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:});
+                    kwds.magneticion = obj.baseobj.unit_cell.label{1};
+                    kwds.formfact = false;
+                    kwds.sab_calc = { @obj.interpolate };
+                else
+                    % Non-identical magnetic ions, use eigenvectors
+                    [ingrid, Qtrans] = brillem.spinw2bzg(ingrid, 'max_volume', kwds.max_volume);
+                    kwds.filler = @(varargin) brillem.spinwfiller(obj.baseobj, varargin{:}, 'usevectors', true);
+                    kwds.usevect = true;
+                    kwds.sab_calc = { @obj.interpolate, @obj.sw_sab };
+                end
+                kwds.Qtrans = Qtrans;
+                kwds.twin = obj.baseobj.twin;
+            end
             grid_dim = brillem.is_brille_grid(ingrid);
             obj.isQE = 4 == grid_dim;
             if 0 == grid_dim
@@ -101,15 +133,22 @@ classdef Brille < handle
                     obj.Qtrans([1,2,3,5,6,7,9,10,11])=kwds.Qtrans(:);
                 end
             end
-
-            if iscell(kwds.fill)
-                fill = kwds.fill;
-            else
-                fill = {kwds.fill};
+            if ~isempty(kwds.twin)
+                obj.twin = kwds.twin;
             end
-            assert(iscell(fill) && all( cellfun(@(x)(isa(x,'function_handle')), fill) ));
-            obj.filler = fill;
-            obj.nFillers = length(fill);
+            if ~isempty(kwds.sab_calc)
+                assert(iscell(kwds.sab_calc) && all( cellfun(@(x)(isa(x,'function_handle')), kwds.sab_calc) ));
+                obj.sab_calc = kwds.sab_calc;
+            end
+
+            if iscell(kwds.filler)
+                filler = kwds.filler;
+            else
+                filler = {kwds.filler};
+            end
+            assert(iscell(filler) && all( cellfun(@(x)(isa(x,'function_handle')), filler) ));
+            obj.filler = filler;
+            obj.nFillers = length(filler);
 
             % anything that defines 'varargout', including anonymous functions, returns negative nargout
             if ~isempty(kwds.nfillval) && isnumeric(kwds.nfillval) && isscalar(kwds.nfillval)
@@ -117,6 +156,8 @@ classdef Brille < handle
             end
             if ~isempty(kwds.nfillvec) && isnumeric(kwds.nfillvec) && isscalar(kwds.nfillvec)
                 nfillvec = kwds.nfillvec;
+            else
+                nfillvec = [];
             end
             fshapeval = kwds.shapeval; % what is the shape of each filler output
             fshapevec = kwds.shapevec;
@@ -130,7 +171,7 @@ classdef Brille < handle
                         nfillvec = 1;
                         rlu = true;
                         interpret = { @obj.neutron_spinwave_intensity, @obj.convolve_modes };
-                        nret = [2,1];
+                        nret = [2, 1];
                         fshapeval = {1}; % filler produces 1 energy and a 3x3 matrix per Q
                         fshapevec = {[3,3]};
                 end
@@ -154,9 +195,10 @@ classdef Brille < handle
                 fshapeval = {fshapeval};
             end
             if ~iscell(fshapevec)
-                fshapevec = {fshapfshapeveceval};
+                fshapevec = {fshapevec};
             end
-            assert( ~isempty(fshapevec) && ~isempty(fshapeval) && numel(fshapeval) == nfillval && numel(fshapevec) == nfillvec, 'We need to know the shape of the filler output(s)' );
+            assert( ~isempty(fshapeval) && exist('nfillval') && numel(fshapeval) == nfillval, ...
+                'We need to know the shape of the filler output(s), please at least specify ''nfillval'' and ''shapeval''' );
 
             assert( nret(end) == 1, 'the last interpreter function should return a scalar!');
             obj.nFillVal = nfillval;
@@ -172,8 +214,8 @@ classdef Brille < handle
         sqw = horace_sqw(obj,qh,qk,ql,en,varargin)
         QorQE = get_mapped(obj)
         fill(obj,varargin)
-        intres = interpolate(obj,qh,qk,ql,en)
-        sqw = unpolarized_neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
+        [valres, vecres] = interpolate(obj,qh,qk,ql,en,varargin)
+        [omega, S] = neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
         con = convolve_modes(obj,qh,qk,ql,en,omega,S,varargin)
     end
 end

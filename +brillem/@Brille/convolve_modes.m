@@ -14,11 +14,9 @@
 % You should have received a copy of the GNU General Public License
 
 function convS = convolve_modes(obj,qh,qk,ql,en,omega,S,varargin)
-inpForm.fname  = {'resfun' 'pars'};
-inpForm.defval = {'gauss'   1    };
-inpForm.size   = {[1 -2]   [1 -1]};
-inpForm.soft   = {false    false};
-kwds = brillem.readparam(inpForm, varargin{:}); % No complaints about extra input values
+d.names = {'resfun', 'pars'};
+d.defaults = {'gauss', 1};
+kwds = brillem.readparam(d, varargin{:}); % No complaints about extra input values
 
 pars = kwds.pars;
 % Determine which resolution function to use.
@@ -47,11 +45,11 @@ else
     resfun = @(Emat,center)gauss_internal(Emat,center,@(x)(fwhm+x*0));
 end
 
-res = zeros(size(omega,1),1);
+res = zeros(size(omega,1), 1);
 for i=1:size(omega,2)
-    res = res + S(:,i).*resfun( en, omega(:,i));
+    res = res + S(:,i) .* resfun(en, omega(:,i));
 end
-convS = scale_factor * sum( res, 2); % sum over modes
+convS = scale_factor * sum(res, 2); % sum over modes
 
 end
 

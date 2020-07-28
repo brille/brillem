@@ -15,26 +15,27 @@
 % You should have received a copy of the GNU Affero General Public License
 % along with brille. If not, see <https://www.gnu.org/licenses/>.
 
-function [omega,S] = neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
-assert( numel(qh)==numel(qk) && numel(qk)==numel(en)...
-     && numel(qh)==numel(en),    'Expected matching numel arrays');
-assert( all(size(qh)==size(qk)) && all(size(ql)==size(en)) ...
-     && all(size(qh)==size(en)), 'Expected matching shaped arrays');
+function [omega, S] = neutron_spinwave_intensity(obj,qh,qk,ql,en,omega,Sab,varargin)
+assert( numel(qh)==numel(qk) && numel(qk)==numel(ql)...
+     && numel(qh)==numel(ql),    'Expected matching numel arrays');
+assert( all(size(qh)==size(qk)) && all(size(qk)==size(ql)) ...
+     && all(size(qh)==size(ql)), 'Expected matching shaped arrays');
 
 if numel(qh) ~= size(qh,1)
     qh = qh(:);
     qk = qk(:);
     ql = ql(:);
-%     en = en(:);
+%    en = en(:);
 end
 nQ = numel(qh);
 Q = cat(2,qh,qk,ql);
 if obj.rluNeeded % qh,qk,ql are (or should be) in rlu, but we need absolute
-    Bmatrix = double( obj.pygrid.BrillouinZone.lattice.get_B_matrix() );
+    Bmatrix = double( obj.pygrid.BrillouinZone.lattice.B );
     trn = obj.Qtrans(1:3,1:3);
     Bmatrix = trn*Bmatrix;
 
-    Q = permute(mtimesx_mex(Bmatrix,permute(Q,[2,1])),[2,1]); % Q is (nQ,3) but mtimesx needs (3,nQ)
+    % TODO: Using SpinW provided mtimesx here - need to provide it with Brillem or rewrite
+    Q = permute(sw_mtimesx(Bmatrix,permute(Q,[2,1])),[2,1]); % Q is (nQ,3) but mtimesx needs (3,nQ)
 end
 
 assert(size(omega,1)==nQ, 'The number of q points does not match the omega. Is one a py.numpy.array?');

@@ -80,8 +80,12 @@ else
 end
 
 if ~isstruct(raw)
-    MException('brillem:readparam:WrongParameter',...
-        'Parameter name-value pairs are expected!').throwAsCaller;
+    if isempty(raw)
+        raw = struct;
+    else
+        MException('brillem:readparam:WrongParameter',...
+            'Parameter name-value pairs are expected!').throwAsCaller;
+    end
 end
 
 if ~isfield(format, 'names')
@@ -107,7 +111,7 @@ for ii = 1:length(fName)
         inputValid = true;
         
         % Go through all dimension of the selected field to check size.
-        if check
+        if isfield(format, 'sizes')
             for jj = 1:length(format.sizes{ii})
                 if format.sizes{ii}(jj)>0
                     if format.sizes{ii}(jj) ~= size(raw.(rName{rawIdx}),jj)
