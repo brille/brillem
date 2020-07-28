@@ -29,17 +29,11 @@ kwds = brillem.readparam(d, varargin{:});
 % angles rotated by the amount determined by k.
 
 if all(isnan(kwds.k)) && all(isnan(kwds.nExt))
-    % Default case, use nExt and k values from SpinW object
-    if ~all(sw.mag_str.k==0) && ~all(sw.mag_str.nExt==1)
-        error(['Brille cannot handle SpinW models which have both supercell' ...
-              'and single-k structure simultaneously']);
-    elseif all(sw.mag_str.k==0)
-        nExt = double(sw.mag_str.nExt);
-        k = 1 ./ nExt;
-    else
-        k = sw.mag_str.k;
-        [~, nExt] = rat(k(:), 1e-5);  % Use the denominator of k
-    end
+    % For incommensurate structure, should use the full (structural) BZ
+    % rather than the reduced BZ corresponding to the magnetic k-vector
+    % So here we ignore the SpinW k-vector and just use the supercell size.
+    nExt = double(sw.mag_str.nExt);
+    k = 1 ./ nExt;
 elseif ~all(isnan(kwds.k)) && ~all(isnan(kwds.nExt))
     % User specified nExt and k
     k = kwds.k;
