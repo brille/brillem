@@ -14,26 +14,19 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function [dlat,rlat] = lattice(lens, angs, raddeg, rord, varargin)
-if nargin < 4 || isempty(rord)
+function [dlat,rlat] = lattice(lens, angs, rord, varargin)
+if nargin < 3 || isempty(rord)
     rord = 'direct';
-end
-if nargin < 3 || isempty(raddeg)
-    raddeg = 'degrees';
 end
 if nargin < 2 || isempty(angs)
     angs = [90,90,90];
-end
-
-if strncmp(raddeg, 'rad', 3)
-    angs = angs * 180 / pi;
 end
 
 d.names = {'spgr'};
 d.defaults = {'P 1'};
 kwds = brillem.readparam(d, varargin{:});
 
-
+% Brille will automatically deduce if angles given in degrees or radians
 assert(numel(lens)>=3 && numel(angs)>=3)
 pylens =brillem.m2p( lens(1:3) );
 pyangs =brillem.m2p( angs(1:3) );

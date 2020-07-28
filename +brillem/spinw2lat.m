@@ -98,8 +98,9 @@ latmat_primitive = [];
 
 spg = sw.lattice.label;
 try
+    % This check is in case the spacegroup / xyz label is not recognised
     py.brille.Direct([4 4 4], [90 90 90], spg);
 catch
     spg = 'P 1';
 end
-[dlat,rlat]=brillem.lattice(lens,angs,'radian','direct','spgr',spg);
+[dlat,rlat]=brillem.lattice(lens,angs,'direct','spgr',spg);
