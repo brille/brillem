@@ -23,8 +23,8 @@ end
 if size(hkl,1) > 3 || size(hkl,3)>1
     error('sw_qscan:WrongInput','The dimensions of the q-vector list are wrong!')
 end
-
-bv = (inv(brillem.p2m(obj.pygrid.BrillouinZone.lattice.lattice_matrix)) * 2 * pi) / obj.Qtrans(1:3,1:3);
+% bv = (inv(brillem.p2m(obj.pygrid.BrillouinZone.lattice.lattice_matrix)) * 2 * pi) / obj.Qtrans(1:3,1:3);
+bv = brillem.p2m(obj.pygrid.BrillouinZone.lattice.star.lattice_matrix)/obj.Qtrans(1:3,1:3);
 hklA = 2*pi*(hkl'/bv)';
 if ~isempty(obj.twin) && (numel(obj.twin.vol) > 1 || sum(sum(abs(obj.twin.rotc(:,:,1) - eye(3)))) > 0)
     hkl = obj.twinq(hkl);
@@ -34,16 +34,30 @@ else
     istwinned = false;
 end
 
+omega = cell(numel(hkl),1);
+Sab = cell(numel(hkl),1);
+
+tmp_array_fudge = 15;
 for ic = 1:numel(hkl)
     qh = hkl{ic}(1,:)'; qk = hkl{ic}(2,:)'; ql = hkl{ic}(3,:)'; en = ql*0;
-    intres = {};
-    for i=1:numel(obj.sab_calc)
-        newintres = cell(1, 2); % Assume first return value is omega, and second is Sab
-        [newintres{:}] = obj.sab_calc{i}(qh,qk,ql,en,intres{:},varargin{:});
-        intres = newintres;
+    % chunk the q points:
+    no_pts = numel(qh);
+    pt_per_chunk = double(brillem.chunk_size(obj.pygrid, tmp_array_fudge));
+    no_chunks = ceil(no_pts/pt_per_chunk);
+    chunk_list = 0:pt_per_chunk:no_pts;
+    if no_pts < pt_per_chunk * no_chunks
+        chunk_list = [chunk_list no_pts]; %#ok<AGROW>
     end
-    omega{ic} = permute(intres{1}, [2 1]); % Convert to SpinW convention
-    Sab{ic} = permute(intres{2}, [3 4 2 1]);
+    omega_ch = cell(1, no_chunks);
+    Sab_ch = cell(1, no_chunks);
+    % call the inner function on the chunks
+    for ch_i=1:no_chunks
+        ch = chunk_list(ch_i)+1 : chunk_list(ch_i+1);
+        [omega_ch{ch_i}, Sab_ch{ch_i}] = sab_calc_inner(obj, qh(ch), qk(ch), ql(ch), en(ch), varargin{:});
+    end
+    % combine the chunk results and permute into SpinW convention
+    omega{ic} = permute(cat(1, omega_ch{:}), [2 1]);
+    Sab{ic} = permute(cat(1, Sab_ch{:}), [3 4 2 1]);
 end
 
 if istwinned
@@ -79,7 +93,6 @@ end
 
 end
 
-
 function qOut = qscanlines(qLim)
 if numel(qLim{end}) == 1
     nQ = qLim{end};
@@ -100,4 +113,15 @@ else
             qOut = qOut(:,1:end-1);
         end
     end
+end
+
+function [omega, Sab] = sab_calc_inner(obj, qh, qk, ql, en, varargin)
+    intres = {};
+    for i=1:numel(obj.sab_calc)
+        newintres = cell(1, 2); % Assume first return value is omega, and second is Sab
+        [newintres{:}] = obj.sab_calc{i}(qh,qk,ql,en,intres{:},varargin{:});
+        intres = newintres;
+    end
+    omega = intres{1};
+    Sab = intres{2};
 end

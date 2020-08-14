@@ -14,8 +14,10 @@
 % You should have received a copy of the GNU General Public License
 % along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function excess = excess_memory(pygrid, npts, multiplier)
-if nargin < 3 || isempty(multiplier); multiplier = 1; end
+function chunk = chunk_size(pygrid, multiplier)
+if nargin < 2 || isempty(multiplier); multiplier = 1; end
+chunk = brillem.free_bytes();
 bpp = multiplier*brillem.p2m(pygrid.bytes_per_point);
-excess = brillem.free_bytes() - npts*bpp;
+if bpp > 0; chunk = chunk/bpp; end
 end
+

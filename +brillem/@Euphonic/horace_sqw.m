@@ -89,11 +89,14 @@ matkeys.sizes = {[4,4]};
 
 assert(ismatrix(input_pars) && isnumeric(input_pars), 'Numeric matrix input parameters are required')
 
+% chunk the q points:
 nQ = numel(qh);
-memmult = 11; % Fudge-factor based on NDLT1145 (Win10, 32GB RAM)
-excess_bytes = brillem.excess_memory(obj.pyobj.grid, nQ, memmult);
-if excess_bytes < 0
-    error('Not enough free memory! Estimated shortfall %g bytes',excess_bytes);
+memmult = 12; % Fudge-factor based on NDLT1145 (Win10, 32GB RAM)
+pt_per_chunk = double(brillem.chunk_size(obj.pyobj.grid, memmult));
+no_chunks = ceil(nQ/pt_per_chunk);
+chunk_list = 0:pt_per_chunk:nQ;
+if nQ < pt_per_chunk * no_chunks
+  chunk_list = [chunk_list nQ];
 end
 
 inshape = size(qh);
@@ -112,7 +115,6 @@ if sum(sum(abs(matkwds.coordtrans - eye(4)))) > 0
     en = sum(bsxfun(@times, matkwds.coordtrans(4,:), qc),2);
     clear qc;
 end
-Q = brillem.m2p(cat(2,qh,qk,ql));
 
 if isfield(dict,'scale')
     scale = dict.scale;
@@ -144,9 +146,31 @@ dict.temperature = temp;
 if ~isempty(pars)
     dict.param = pars;
 end
-sqw = brillem.p2m( obj.pyobj.s_qw(Q, brillem.m2p(en), py.dict(dict)) );
 
+sqw_chunk = cell(1, no_chunks);
+% call the inner function on the chunks
+fprintf('%d chunks: ',no_chunks);
+for i=1:no_chunks
+  if mod(i,10)==0
+    fprintf('%d',i/10);
+  else
+    fprintf('.');
+  end
+  ch = chunk_list(i)+1 : chunk_list(i+1);
+  sqw_chunk{i} = horace_sqw_inner(obj, qh(ch), qk(ch), ql(ch), en(ch), dict);
+end
+fprintf('\n');
+% combine the chunk results
+sqw = cat(1, sqw_chunk{:});
+% and reshape the output to match the input
 if size(sqw) ~= inshape
   sqw = reshape(sqw, inshape);
 end
 end % horace_sqw
+
+
+function sqw = horace_sqw_inner(obj, qh, qk, ql, en, dict)
+  Q = brillem.m2p(cat(2, qh, qk, ql)); % (nQ, 3)
+  pysqw = obj.pyobj.s_qw(Q, brillem.m2p(en), py.dict(dict)); % (nQ,)
+  sqw = permute(brillem.p2m(pysqw),[2,1]); % (1,nQ) -> (nQ, 1)
+end % end horace_sqw_inner
