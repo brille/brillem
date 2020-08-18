@@ -91,7 +91,7 @@ assert(ismatrix(input_pars) && isnumeric(input_pars), 'Numeric matrix input para
 
 % chunk the q points:
 nQ = numel(qh);
-memmult = 12; % Fudge-factor based on NDLT1145 (Win10, 32GB RAM)
+memmult = 3; % Fudge-factor based on NDLT1145 (Win10, 32GB RAM)
 pt_per_chunk = double(brillem.chunk_size(obj.pyobj.grid, memmult));
 no_chunks = ceil(nQ/pt_per_chunk);
 chunk_list = 0:pt_per_chunk:nQ;
@@ -149,17 +149,30 @@ end
 
 sqw_chunk = cell(1, no_chunks);
 % call the inner function on the chunks
-fprintf('%d chunks: ',no_chunks);
+wd = 1;
+if no_chunks > 1
+  fprintf('Evaluate S(Q,W) split into %d chunks:\n',no_chunks);
+  nd = floor(log10(no_chunks));
+  fmt = sprintf('%%%dd',nd);
+  wd = 10*floor(80/(9+nd));
+end
 for i=1:no_chunks
-  if mod(i,10)==0
-    fprintf('%d',i/10);
-  else
-    fprintf('.');
+  if no_chunks > 1
+    if mod(i,10)==0
+      fprintf(fmt,i/10);
+      if mod(i,wd)==0
+          fprintf('\n');
+      end
+    else
+      fprintf('.');
+    end
   end
   ch = chunk_list(i)+1 : chunk_list(i+1);
   sqw_chunk{i} = horace_sqw_inner(obj, qh(ch), qk(ch), ql(ch), en(ch), dict);
 end
-fprintf('\n');
+if mod(no_chunks, wd) > 0
+  fprintf('\n');
+end
 % combine the chunk results
 sqw = cat(1, sqw_chunk{:});
 % and reshape the output to match the input
@@ -171,6 +184,8 @@ end % horace_sqw
 
 function sqw = horace_sqw_inner(obj, qh, qk, ql, en, dict)
   Q = brillem.m2p(cat(2, qh, qk, ql)); % (nQ, 3)
+  fprintf('%s Call Python object''s method\n',datetime());
   pysqw = obj.pyobj.s_qw(Q, brillem.m2p(en), py.dict(dict)); % (nQ,)
+  fprintf('%s Python call finished\n', datetime());
   sqw = permute(brillem.p2m(pysqw),[2,1]); % (1,nQ) -> (nQ, 1)
 end % end horace_sqw_inner

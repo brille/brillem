@@ -22,7 +22,14 @@ if nargin<2 || isempty(dtype) || ~ischar(dtype)
     dtype = 'double';
 end
 
-if strncmpi(dtype,'complex',min(length(dtype),7)) || any(imag(m(:))) % the only way of testing for complex numbers in MATLAB?!
+if isstruct(m)
+    fn = fieldnames(m);
+    for i=1:numel(fn)
+        m.(fn{i}) = brillem.m2p(m.(fn{i}), dtype);
+    end
+    p = py.dict(m);
+    
+elseif strncmpi(dtype,'complex',min(length(dtype),7)) || any(imag(m(:))) % the only way of testing for complex numbers in MATLAB?!
     if isscalar(m)
         p = py.complex(m);
     else

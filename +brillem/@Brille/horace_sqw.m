@@ -139,9 +139,29 @@ function sqw = horace_sqw(obj, qh, qk, ql, en, pars, varargin)
   end
   sqw_chunk = cell(1, no_chunks);
   % call the inner function on the chunks
+  wd = 1;
+  if no_chunks > 1
+    fprintf('Evaluate S(Q,W) split into %d chunks:\n',no_chunks);
+    nd = floor(log10(no_chunks));
+    fmt = sprintf('%%%dd',nd);
+    wd = 10*floor(80/(9+nd));
+  end
   for i=1:no_chunks
+    if no_chunks > 1
+      if mod(i,10)==0
+        fprintf(fmt,i/10);
+        if mod(i,wd)==0
+            fprintf('\n');
+        end
+      else
+        fprintf('.');
+      end
+    end
     ch = chunk_list(i)+1 : chunk_list(i+1);
-    sqw_chunk{i} = horace_sqw_inner(obj, qh(ch), qk(ch), ql(ch), en(ch), interpinpt);
+    sqw_chunk{i} = horace_sqw_inner(obj, qh(ch), qk(ch), ql(ch), en(ch), dict);
+  end
+  if mod(no_chunks, wd) > 0
+    fprintf('\n');
   end
   % combine the chunk results
   sqw = cat(1, sqw_chunk{:});
