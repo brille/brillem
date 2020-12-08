@@ -1,4 +1,4 @@
-classdef generic_python_wrapper < euphonic.light_python_wrapper
+classdef generic_python_wrapper < brille.light_python_wrapper
     % Matlab wrapper around a generic Python object
     % To obtain help on this class and its methods please type help(class) or help(class.method) on the command line.
     % This will bring up the Python documentation
