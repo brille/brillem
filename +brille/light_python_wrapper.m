@@ -5,6 +5,7 @@ classdef light_python_wrapper < dynamicprops
     end
     properties(Access=protected)
         helpref;  % Reference to the python class for help info
+        overrides = {};  % Cell of methods to override with Matlab method
     end
     methods(Static, Access=protected)
         function out = parse_args(args, fun_ref)
@@ -16,14 +17,17 @@ classdef light_python_wrapper < dynamicprops
             end
             % Convert Matlab style arguments to Python args and kwargs
             if nargin > 1
-                out = parse_with_signature(args, get_signatures(fun_ref));
-            else
-                [kw_args, remaining_args] = get_kw_args(args);
-                if ~isempty(kw_args)
-                    out = [remaining_args(:)' {pyargs(kw_args{:})}];
-                else
-                    out = remaining_args;
+                try
+                    out = parse_with_signature(args, get_signatures(fun_ref));
+                catch ME
+                    if strncmp(ME.message, 'Python Error: ValueError: no signature found', 44)
+                        out = parse_without_signature(args);
+                    else
+                        rethrow(ME)
+                    end
                 end
+            else
+                out = parse_without_signature(args);
             end
         end
     end
@@ -73,24 +77,26 @@ classdef light_python_wrapper < dynamicprops
                         varargout = python_redirection(varargout, s((ii+1):end));
                     end
                 case '.'
-                    try
-                        varargout = python_redirection(obj.pyobj, s);
-                        % Try to convert output to Matlab format if possible
-                        try %#ok<TRYNC>
-                            varargout = p2m(varargout);
-                        end
-                    catch ME
-                        % Property is not in the Python object - must be in the Matlab object
-                        if (strcmp(ME.identifier, 'MATLAB:Python:PyException') && ...
-                                ~isempty(strfind(ME.message, 'object has no attribute'))) || ...
-                           strcmp(ME.message, sprintf('Object "%s" is not callable', s(1).subs))
-                            if numel(s) > 1 && strcmp(s(2).type, '()')
-                                varargout = obj.(s(1).subs)(s(2).subs{:});
-                            else
-                                varargout = obj.(s(1).subs);
+                    if any(cellfun(@(c) strcmp(s(1).subs, c), obj.overrides))
+                        varargout = get_matlab(obj, s);
+                    else
+                        try
+                            varargout = python_redirection(obj.pyobj, s);
+                            % Try to convert output to Matlab format if possible
+                            if ~strcmp(s(end).subs, 'pyobj')
+                                try %#ok<TRYNC>
+                                    varargout = brille.p2m(varargout);
+                                end
                             end
-                        else
-                            rethrow(ME)
+                        catch ME
+                            % Property is not in the Python object - must be in the Matlab object
+                            if (strcmp(ME.identifier, 'MATLAB:Python:PyException') && ...
+                                    ~isempty(strfind(ME.message, 'object has no attribute'))) || ...
+                               strcmp(ME.message, sprintf('Object "%s" is not callable', s(1).subs))
+                                varargout = get_matlab(obj, s);
+                            else
+                                rethrow(ME)
+                            end
                         end
                     end
                 case '()'
@@ -224,6 +230,14 @@ function varargout = python_redirection(first_obj, s)
     end
 end
 
+function out = get_matlab(obj, s)
+    if numel(s) > 1 && strcmp(s(2).type, '()')
+        out = obj.(s(1).subs)(s(2).subs{:});
+    else
+        out = obj.(s(1).subs);
+    end
+end
+
 function [kw_args, remaining_args] = get_kw_args(args)
     % Finds the keyword arguments (string, val) pairs, assuming that they always at the end (last 2n items)
     first_kwarg_id = numel(args) + 1;
@@ -294,6 +308,18 @@ function sig_struct = get_signatures(fun_ref)
     sig_struct.sigs = sigs;
 end
 
+function out = get_correct_type(pname, pval, sigs)
+    % Looks through Python signatures and converts Matlab types of correct Python types 
+    sigidx = find(cellfun(@(c) strcmp(pname, c), {sigs.name}));
+    py_type = class(sigs(sigidx).default);
+    out = pval;
+    if is_simple_python(py_type)
+        if strcmp(py_type, 'py.int') || strcmp(py_type, 'py.long')
+            out = int64(pval);
+        end
+    end
+end
+
 function out = parse_with_signature(args, signatures)
     % Convert Matlab style arguments to Python with information from the Python function signature
     named_args = {signatures.sigs([1:signatures.last_pos_index signatures.kw_only_args]).name};
@@ -304,7 +330,7 @@ function out = parse_with_signature(args, signatures)
     while ii <= numel(args)
         if any(cellfun(@(c) strcmp(c, args{ii}), named_args))
             args_kw{end+1} = args{ii};
-            args_kw{end+1} = args{ii+1};
+            args_kw{end+1} = get_correct_type(args{ii}, args{ii+1}, signatures.sigs);
             ii = ii + 1;
         else
             args_remaining{end+1} = args{ii};
@@ -358,5 +384,14 @@ function out = parse_with_signature(args, signatures)
         out = [args_pos(:)' {pyargs(args_kw{:})}];
     else
         out = args_pos;
+    end
+end
+
+function out = parse_without_signature(args)
+    [kw_args, remaining_args] = get_kw_args(args);
+    if ~isempty(kw_args)
+        out = [remaining_args(:)' {pyargs(kw_args{:})}];
+    else
+        out = remaining_args;
     end
 end
