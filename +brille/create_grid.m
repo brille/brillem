@@ -9,7 +9,7 @@ classdef create_grid < brille.light_python_wrapper
             brlm = py.importlib.import_module('brillem');
             obj.helpref = brlm.create_grid;
             % Overrides brille.BZ*Q.fill methods to handle input mangling
-            obj.overrides = {'fill'}; 
+            obj.overrides = {'fill', 'ir_interpolate_at', 'interpolate_at'}; 
             % Allow empty constructor for help function
             if ~isempty(varargin)
                 args = brille.light_python_wrapper.parse_args(varargin, brlm.create_grid);
@@ -33,7 +33,26 @@ classdef create_grid < brille.light_python_wrapper
                 out = brille.generic_python_wrapper(py.getattr(obj.pyobj, 'fill'));
             end
         end
+        function out = ir_interpolate_at(obj, varargin)
+            out = interpolate_overload(obj, varargin, 'ir_interpolate_at')
+        end
+        function out = interpolate_at(obj, varargin)
+            out = interpolate_overload(obj, varargin, 'interpolate_at')
+        end
     end
+end
+
+function out = interpolate_overload(obj, vars, func)
+    func = py.getattr(obj.pyobj, func);
+    if ~isempty(vars)
+        if isnumeric(vars{1}) && size(vars{1}, 1) == 3
+            vars{1} = py.numpy.transpose(py.numpy.array(vars{1}));
+        end
+        out = brille.p2m(func(vars{:}));
+    else
+        out = brille.generic_python_wrapper(func);
+    end
+
 end
 
 function out = reshape_singletons(val)
