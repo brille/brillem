@@ -170,7 +170,7 @@ def create_grid(bz, complex_values=False, complex_vectors=False,
     def constructor(grid_type):
         if complex_values and complex_vectors:
             return getattr(brille, grid_type+'cc')
-        elif complex_values:
+        elif complex_vectors:
             return getattr(brille, grid_type+'dc')
         else:
             return getattr(brille, grid_type+'dd')
