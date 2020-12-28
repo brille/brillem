@@ -62,6 +62,11 @@ def create_bz(*args, is_reciprocal=False, use_primitive=True, search_length=1,
         elif np.shape(args[0]) == (3,):
             lens, angs = tuple(args[:2])
             spg_id = 2
+        elif np.shape(args[0]) == (3,1) or np.shape(args[0]) == (1,3):
+            lens, angs = tuple(args[:2])
+            lens = np.squeeze(np.array(lens))
+            angs = np.squeeze(np.array(angs))
+            spg_id = 2
         elif np.shape(args[0]) == (3,3):
             lattice_vectors = args[0]
             spg_id = 1
