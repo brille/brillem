@@ -1,12 +1,12 @@
 classdef create_grid < brille.light_python_wrapper
-    % Matlab wrapper around the create_grid function in brillem
+    % Matlab wrapper around the create_grid function in brille.utils
     properties(Access=protected)
         pyobj = [];  % Reference to python object
     end
     methods
         % Constructor
         function obj = create_grid(varargin)
-            brlm = py.importlib.import_module('brillem');
+            brlm = py.importlib.import_module('brille.utils');
             obj.helpref = brlm.create_grid;
             % Overrides brille.BZ*Q.fill methods to handle input mangling
             obj.overrides = {'fill', 'ir_interpolate_at', 'interpolate_at'}; 
