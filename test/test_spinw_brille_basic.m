@@ -59,7 +59,7 @@ for im = 1:numel(models); model = models{im};
     sm = false; ff = true;
     figure;
     spci = sw_neutron(swo.spinwave(qln, 'formfact', ff, 'use_brille', true, 'node_volume_fraction', frac*10, 'use_vectors', true, 'sortMode', sm, 'optmem', 2));
-    swo.brille.Qtrans
+    %swo.brille.Qtrans  % brille property is private
     spcu = sw_neutron(swo.spinwave(qln, 'formfact', ff, 'sortMode', sm));
     subplot(211); sw_plotspec(sw_egrid(spcu, 'Evect', linspace(0,emx,nE))); legend off; title([model ' - SpinW'])
     subplot(212); sw_plotspec(sw_egrid(spci, 'Evect', linspace(0,emx,nE))); legend off; title([model ' - Interpolated Eigevectors'])
@@ -67,7 +67,7 @@ for im = 1:numel(models); model = models{im};
     %print('-dpdf', ['brille_eig_' model '.pdf']);
     figure;
     spci = sw_neutron(swo.spinwave(qln, 'formfact', ff, 'use_brille', true, 'node_volume_fraction', frac*10, 'use_vectors', false, 'sortMode', sm, 'optmem', 2));
-    swo.brille.Qtrans
+    %swo.brille.Qtrans  % brille property is private
     spcu = sw_neutron(swo.spinwave(qln, 'formfact', ff, 'sortMode', sm));
     subplot(211); sw_plotspec(sw_egrid(spcu, 'Evect', linspace(0,emx,nE))); legend off; title([model ' - SpinW'])
     subplot(212); sw_plotspec(sw_egrid(spci, 'Evect', linspace(0,emx,nE))); legend off; title([model ' - Interpolated Sab'])
