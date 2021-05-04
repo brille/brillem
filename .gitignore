@@ -1,1 +1,5 @@
 *.asv
+test/brille*pdf
+*~
+*.swp
+*.swo
