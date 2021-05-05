@@ -23,6 +23,7 @@ function output = release(upload_flag)
     cur_dir = pwd;
     cd(this_dir);
 
+    restore_git_repo()
     version = ['v' mersioneer()];
     version = regexprep(version, '+.*', ''); % Strip trailing string
     update_brille_version();
@@ -66,9 +67,9 @@ function output = upload_to_github(upload_flag, version)
     desc = strip(descs{2});  % The first block is before the first version.
     % payload is a json string
     payload = jsonencode(struct('tag_name', version, 'target_commitish', 'master', 'name', version, ...
-                                'body', desc, 'draft', false, 'prerelease', false));
+                                'body', desc, 'draft', true, 'prerelease', false));
     if ~do_upload
-        fprintf('Would send: %s\n', payload);
+        output = sprintf('Would send: %s\n', payload);
         return
     end
     % Reads the mltbx file as bytes
@@ -108,9 +109,12 @@ function update_brille_version()
     brille_version = regexp(req, 'brille[=>]*(?<ver>[0-9\.]*)', 'names').ver;
     this_dir = fileparts(mfilename('fullpath'));
     ver_file = fullfile(this_dir, '+brille', 'private', 'required_modules.m');
+    fid = fopen(ver_file);
+    req = fread(fid, '*char')';
+    fclose(fid);
     fid = fopen(ver_file, 'w');
-    fprintf(fid, ['function out = required_modules()\n' ...
-                  '    out = {''brille'', ''%s''};\nend'], brille_version);
+    new_req = regexprep(req, '''0.0.0''', sprintf('''%s''', brille_version));
+    fwrite(fid, new_req);
     fclose(fid);
 end
 
@@ -135,6 +139,19 @@ function create_mltbx(version)
     fwrite(fid, text);
     fclose(fid);
     matlab.addons.toolbox.packageToolbox('brillem.prj', 'brillem.mltbx');
+    cd(cur_dir);
+end
+
+function restore_git_repo()
+    % Restore changes to files made by previous runs of this script
+    this_dir = fileparts(mfilename('fullpath'));
+    cur_dir = pwd;
+    cd(this_dir);
+    [rc1, ~] = system('git checkout -- +brille/private/required_modules.m');
+    [rc2, ~] = system('git checkout -- mltbx/brillem.prj');
+    if rc1 ~= 0 && rc2 ~=0
+        error('"git restore" command failed to restore the repository'); 
+    end
     cd(cur_dir);
 end
 
