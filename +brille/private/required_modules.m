@@ -1,3 +1,3 @@
 function out = required_modules()
-    out = {'brille', 'TO_BE_DETERMINED'};
+    out = {'brille', '0.0.0'};
 end
