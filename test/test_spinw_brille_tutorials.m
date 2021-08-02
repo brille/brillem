@@ -10,7 +10,16 @@ errs = {};
 
 for iii = 1:numel(tutorials)
     currvals = arrayfun(@(s) s.name, whos, 'UniformOutput', false);
-    run(tutorials{iii}); close all;
+    try
+        run(tutorials{iii}); close all;
+    catch err
+        % Skips symbolic tutorials if we don't have the toolbox
+        if ~(strcmp(err.identifier, 'MATLAB:UndefinedFunction') && ~isempty(strfind(err.message, 'sym'))) && ...
+           ~(strcmp(err.identifier, 'MATLAB:uix:unxdebug:UnknownService'))
+            err
+            rethrow(err);
+        end
+    end
     newvals = arrayfun(@(s) is_new_var(s, currvals), whos, 'UniformOutput', false);
     newvals(cellfun(@(c) isempty(c), newvals)) = [];
     for jj = 1:numel(newvals)

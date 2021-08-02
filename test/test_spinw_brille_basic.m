@@ -35,7 +35,7 @@ for im = 1:numel(models); model = models{im};
         frac = 1e-5;
       case 'tricomm'
         swo.genmagstr('mode', 'random', 'nExt', [3 3 1], 'k', [0 0 0]);
-        swo.addmatrix('label', 'D', 'value', diag([0.1 -0.05 0.5]), 'color', 'blue'); swo.addaniso('D');
+        swo.addmatrix('label', 'D', 'value', diag([0.1 -0.05 1.0]), 'color', 'blue'); swo.addaniso('D');
         pp = swo.optmagsteep('nRun', 2000);
         swo = pp.obj
         frac = 1e-5;
